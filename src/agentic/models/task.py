@@ -48,6 +48,50 @@ class Task(BaseModel):
     result: Optional[Dict] = Field(default=None, description="Task execution result")
     error: Optional[str] = Field(default=None, description="Error message if task failed")
     
+    # Compatibility properties for existing code
+    @property
+    def task_type(self) -> TaskType:
+        """Get task type from intent"""
+        return self.intent.task_type
+    
+    @property
+    def complexity_score(self) -> float:
+        """Get complexity score from intent"""
+        return self.intent.complexity_score
+    
+    @property
+    def estimated_duration(self) -> int:
+        """Get estimated duration from intent"""
+        return self.intent.estimated_duration
+    
+    @property
+    def affected_areas(self) -> List[str]:
+        """Get affected areas from intent"""
+        return self.intent.affected_areas
+    
+    @property
+    def requires_reasoning(self) -> bool:
+        """Get requires reasoning from intent"""
+        return self.intent.requires_reasoning
+    
+    @property
+    def requires_coordination(self) -> bool:
+        """Get requires coordination from intent"""
+        return self.intent.requires_coordination
+    
+    @property
+    def assigned_agent_id(self) -> Optional[str]:
+        """Get primary assigned agent ID for compatibility"""
+        return self.assigned_agents[0] if self.assigned_agents else None
+    
+    @classmethod
+    def from_intent(cls, intent: TaskIntent, command: str) -> Task:
+        """Create a Task from a TaskIntent and command"""
+        return cls(
+            command=command,
+            intent=intent
+        )
+    
     def mark_started(self) -> None:
         """Mark task as started"""
         self.status = "running"
@@ -96,32 +140,39 @@ class TaskResult(BaseModel):
         arbitrary_types_allowed = True
     
     @property
+    def success(self) -> bool:
+        """Check if task execution was successful (compatibility)"""
+        return self.status == "completed" and self.error is None
+    
+    @property
     def is_success(self) -> bool:
         """Check if task execution was successful"""
         return self.status == "completed" and self.error is None
 
 
 class ExecutionPlan(BaseModel):
-    """Plan for executing a command across multiple agents"""
-    command: str = Field(description="Original command to execute")
+    """Plan for executing multiple tasks with coordination"""
+    id: str = Field(description="Unique plan identifier")
     tasks: List[Task] = Field(default_factory=list, description="Tasks to be executed")
-    execution_order: List[List[str]] = Field(default_factory=list, description="Parallel execution groups by task ID")
+    parallel_groups: Optional[List[List[str]]] = Field(default=None, description="Parallel execution groups by task ID")
     estimated_duration: int = Field(default=0, description="Estimated total duration in minutes")
     risk_factors: List[str] = Field(default_factory=list, description="Identified risk factors")
+    dependencies: Dict[str, List[str]] = Field(default_factory=dict, description="Task dependencies map")
     
     def add_task(self, task: Task, dependencies: Optional[List[str]] = None) -> None:
         """Add a task to the execution plan"""
         if dependencies:
             task.dependencies = dependencies
+            self.dependencies[task.id] = dependencies
         self.tasks.append(task)
-        self._recalculate_execution_order()
+        self._recalculate_parallel_groups()
     
-    def _recalculate_execution_order(self) -> None:
-        """Recalculate execution order based on task dependencies"""
+    def _recalculate_parallel_groups(self) -> None:
+        """Recalculate parallel execution groups based on task dependencies"""
         # Simple topological sort for task dependencies
         task_map = {task.id: task for task in self.tasks}
         visited = set()
-        execution_groups = []
+        parallel_groups = []
         
         def get_ready_tasks() -> List[str]:
             """Get tasks that have no unmet dependencies"""
@@ -139,11 +190,38 @@ class ExecutionPlan(BaseModel):
             if not ready_tasks:
                 # Circular dependency or orphaned tasks
                 remaining = [task.id for task in self.tasks if task.id not in visited]
-                execution_groups.append(remaining)
+                parallel_groups.append(remaining)
                 visited.update(remaining)
                 break
             
-            execution_groups.append(ready_tasks)
+            parallel_groups.append(ready_tasks)
             visited.update(ready_tasks)
         
-        self.execution_order = execution_groups 
+        self.parallel_groups = parallel_groups
+    
+    def get_task_by_id(self, task_id: str) -> Optional[Task]:
+        """Get a task by its ID"""
+        for task in self.tasks:
+            if task.id == task_id:
+                return task
+        return None
+    
+    def get_dependent_tasks(self, task_id: str) -> List[Task]:
+        """Get tasks that depend on the given task"""
+        dependent_tasks = []
+        for task in self.tasks:
+            if task_id in task.dependencies:
+                dependent_tasks.append(task)
+        return dependent_tasks
+    
+    def validate_dependencies(self) -> List[str]:
+        """Validate that all task dependencies exist"""
+        errors = []
+        task_ids = {task.id for task in self.tasks}
+        
+        for task in self.tasks:
+            for dep_id in task.dependencies:
+                if dep_id not in task_ids:
+                    errors.append(f"Task {task.id} depends on non-existent task {dep_id}")
+        
+        return errors 

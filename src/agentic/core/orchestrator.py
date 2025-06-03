@@ -1,439 +1,322 @@
 """
-Main Orchestrator for coordinating multiple AI agents
+Main Orchestrator for coordinating agent activities
 """
 
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from agentic.core.agent_registry import AgentRegistry
-from agentic.core.command_router import CommandRouter, RoutingDecision
+from agentic.core.command_router import CommandRouter
+from agentic.core.coordination_engine import CoordinationEngine, ExecutionResult
+from agentic.core.intent_classifier import IntentClassifier
 from agentic.core.project_analyzer import ProjectAnalyzer
+from agentic.core.shared_memory import SharedMemory
 from agentic.models.agent import AgentSession
 from agentic.models.config import AgenticConfig
 from agentic.models.project import ProjectStructure
-from agentic.models.task import Task, TaskResult
+from agentic.models.task import ExecutionPlan, Task, TaskResult
 from agentic.utils.logging import LoggerMixin
 
 
 class Orchestrator(LoggerMixin):
     """
-    Main orchestrator that coordinates multiple AI agents for development tasks
+    Main orchestrator that coordinates all agent activities
+    
+    This class serves as the central coordination point for the Agentic system,
+    managing agents, routing commands, and executing tasks.
     """
     
     def __init__(self, config: AgenticConfig):
         super().__init__()
         self.config = config
-        self.workspace_path = config.workspace_path
         
-        # Core components
-        self.agent_registry = AgentRegistry(self.workspace_path)
+        # Initialize core components
+        self.project_analyzer = ProjectAnalyzer()
+        self.agent_registry = AgentRegistry()
+        self.shared_memory = SharedMemory()
+        self.intent_classifier = IntentClassifier()
         self.command_router = CommandRouter(self.agent_registry)
-        self.project_analyzer = ProjectAnalyzer(self.workspace_path)
+        self.coordination_engine = CoordinationEngine(self.agent_registry, self.shared_memory)
         
         # State
-        self.project_structure: Optional[ProjectStructure] = None
-        self.active_sessions: List[AgentSession] = []
-        self.task_history: List[Task] = []
-        self.is_initialized = False
+        self._project_structure: Optional[ProjectStructure] = None
+        self._is_initialized = False
     
-    async def initialize(self) -> bool:
-        """Initialize the orchestrator and auto-spawn agents"""
+    async def initialize(self, project_path: Optional[Path] = None) -> None:
+        """Initialize the orchestrator with project analysis"""
         try:
             self.logger.info("Initializing Agentic orchestrator...")
             
             # Analyze project structure
-            self.logger.info("Analyzing project structure...")
-            self.project_structure = await self.project_analyzer.analyze()
+            if project_path:
+                self._project_structure = await self.project_analyzer.analyze_project(project_path)
+                self.shared_memory.set_project_structure(self._project_structure)
+                self.logger.info(f"Project analyzed: {self._project_structure.project_name}")
             
-            # Auto-spawn appropriate agents based on project structure
-            self.logger.info("Auto-spawning agents based on project analysis...")
-            self.active_sessions = await self.agent_registry.auto_spawn_agents(self.project_structure)
+            # Initialize agent registry
+            await self.agent_registry.initialize()
             
-            if not self.active_sessions:
-                self.logger.warning("No agents were spawned successfully")
-                return False
+            # Start background tasks
+            asyncio.create_task(self._background_maintenance())
             
-            agent_names = [session.agent_config.name for session in self.active_sessions]
-            self.logger.info(f"Successfully spawned {len(self.active_sessions)} agents: {', '.join(agent_names)}")
-            
-            self.is_initialized = True
-            return True
+            self._is_initialized = True
+            self.logger.info("Orchestrator initialization complete")
             
         except Exception as e:
             self.logger.error(f"Failed to initialize orchestrator: {e}")
-            return False
+            raise
     
-    async def execute_command(self, command: str, context: Optional[dict] = None) -> TaskResult:
-        """Execute a command using the appropriate agent(s)"""
-        if not self.is_initialized:
-            return TaskResult(
-                task_id="uninitialized",
-                agent_id="orchestrator",
-                success=False,
-                output="",
-                error="Orchestrator not initialized. Run 'agentic init' first."
-            )
+    async def execute_command(self, command: str, context: Optional[Dict[str, Any]] = None) -> TaskResult:
+        """Execute a single command"""
+        if not self._is_initialized:
+            raise RuntimeError("Orchestrator not initialized. Call initialize() first.")
+        
+        self.logger.info(f"Executing command: {command[:50]}...")
         
         try:
-            self.logger.info(f"Executing command: {command[:100]}...")
+            # Classify intent
+            intent = await self.intent_classifier.classify_intent(command, context or {})
+            self.logger.debug(f"Classified intent: {intent.task_type}")
             
-            # Route the command to appropriate agents
-            routing_decision = await self.command_router.route_command(command, context)
+            # Create task from intent
+            task = Task.from_intent(intent, command)
             
-            # Create execution plan
-            task = await self.command_router.create_execution_plan(command, routing_decision)
-            self.task_history.append(task)
+            # Route to appropriate agent
+            routing_decision = await self.command_router.route_command(command, context or {})
             
-            # Execute the task
-            if routing_decision.requires_coordination:
-                result = await self._execute_coordinated_task(task, routing_decision)
-            else:
-                result = await self._execute_single_agent_task(task, routing_decision)
+            if not routing_decision.selected_agents:
+                return TaskResult(
+                    task_id=task.id,
+                    agent_id="none",
+                    success=False,
+                    output="",
+                    error="No suitable agent found for command"
+                )
             
-            # Log the result
-            if result.success:
-                self.logger.info(f"Command executed successfully")
-            else:
-                self.logger.error(f"Command execution failed: {result.error}")
+            # Execute with best agent
+            best_agent = routing_decision.selected_agents[0]
+            agent_instance = self.agent_registry.get_agent_by_id(best_agent.id)
+            
+            if not agent_instance:
+                return TaskResult(
+                    task_id=task.id,
+                    agent_id=best_agent.id,
+                    success=False,
+                    output="",
+                    error="Agent instance not found"
+                )
+            
+            # Register task and execute
+            await self.shared_memory.register_task(task)
+            result = await agent_instance.execute_task(task)
+            await self.shared_memory.complete_task(task.id, result)
             
             return result
             
         except Exception as e:
-            self.logger.error(f"Command execution error: {e}")
+            self.logger.error(f"Command execution failed: {e}")
             return TaskResult(
-                task_id="error",
+                task_id=task.id if 'task' in locals() else "unknown",
                 agent_id="orchestrator",
                 success=False,
                 output="",
                 error=str(e)
             )
     
-    async def _execute_single_agent_task(self, task: Task, routing_decision: RoutingDecision) -> TaskResult:
-        """Execute a task using a single agent"""
-        primary_agent = self.agent_registry.get_agent_by_id(routing_decision.primary_agent.id)
+    async def execute_execution_plan(self, plan: ExecutionPlan) -> ExecutionResult:
+        """Execute a multi-task execution plan with coordination"""
+        if not self._is_initialized:
+            raise RuntimeError("Orchestrator not initialized. Call initialize() first.")
         
-        if not primary_agent:
-            return TaskResult(
-                task_id=task.id,
-                agent_id="orchestrator",
-                success=False,
-                output="",
-                error="Primary agent not found"
-            )
-        
-        # Mark agent as busy
-        routing_decision.primary_agent.mark_busy(task.id)
+        self.logger.info(f"Executing plan with {len(plan.tasks)} tasks")
         
         try:
-            # Execute the task
-            result = await primary_agent.execute_task(task)
+            # Execute using coordination engine
+            result = await self.coordination_engine.execute_coordinated_tasks(
+                plan.tasks,
+                plan.parallel_groups
+            )
             
-            # Update task status
-            if result.success:
-                task.mark_completed(result)
-            else:
-                task.mark_failed(result.error)
-            
+            self.logger.info(f"Plan execution completed: {result.status}")
             return result
             
-        finally:
-            # Mark agent as available again
-            routing_decision.primary_agent.mark_available()
-    
-    async def _execute_coordinated_task(self, task: Task, routing_decision: RoutingDecision) -> TaskResult:
-        """Execute a task requiring coordination between multiple agents"""
-        self.logger.info(f"Executing coordinated task with {len(routing_decision.all_agents)} agents")
-        
-        try:
-            # Phase 1: Reasoning and analysis (if reasoning agent available)
-            reasoning_result = None
-            if routing_decision.reasoning_agent:
-                self.logger.info("Phase 1: Reasoning and analysis")
-                reasoning_agent = self.agent_registry.get_agent_by_id(routing_decision.reasoning_agent.id)
-                if reasoning_agent:
-                    reasoning_result = await reasoning_agent.execute_task(task)
-                    if not reasoning_result.success:
-                        self.logger.warning("Reasoning phase failed, but continuing...")
-            
-            # Phase 2: Primary agent execution
-            self.logger.info("Phase 2: Primary agent execution")
-            primary_agent = self.agent_registry.get_agent_by_id(routing_decision.primary_agent.id)
-            
-            if not primary_agent:
-                return TaskResult(
-                    task_id=task.id,
-                    agent_id="orchestrator",
-                    success=False,
-                    output="",
-                    error="Primary agent not found"
-                )
-            
-            # Mark agents as busy
-            for agent_session in routing_decision.all_agents:
-                agent_session.mark_busy(task.id)
-            
-            # Prepare enhanced task with reasoning context
-            enhanced_task = task
-            if reasoning_result and reasoning_result.success:
-                # Add reasoning context to task command
-                enhanced_command = f"{task.command}\n\nReasoning guidance:\n{reasoning_result.output}"
-                enhanced_task = Task(
-                    command=enhanced_command,
-                    task_type=task.task_type,
-                    complexity_score=task.complexity_score,
-                    estimated_duration=task.estimated_duration,
-                    affected_areas=task.affected_areas,
-                    requires_reasoning=task.requires_reasoning,
-                    requires_coordination=task.requires_coordination
-                )
-                enhanced_task.assigned_agent_id = task.assigned_agent_id
-            
-            # Execute primary task
-            primary_result = await primary_agent.execute_task(enhanced_task)
-            
-            # Phase 3: Supporting agent tasks (if any)
-            supporting_results = []
-            if routing_decision.supporting_agents and primary_result.success:
-                self.logger.info(f"Phase 3: Executing {len(routing_decision.supporting_agents)} supporting tasks")
-                
-                # Create tasks for supporting agents
-                supporting_tasks = []
-                for i, agent_session in enumerate(routing_decision.supporting_agents):
-                    # Create focused task for each supporting agent
-                    supporting_task = self._create_supporting_task(task, agent_session, primary_result)
-                    supporting_tasks.append((agent_session, supporting_task))
-                
-                # Execute supporting tasks in parallel
-                supporting_results = await self._execute_supporting_tasks(supporting_tasks)
-            
-            # Phase 4: Combine results
-            combined_result = self._combine_coordination_results(
-                task, primary_result, supporting_results, reasoning_result
-            )
-            
-            # Update task status
-            if combined_result.success:
-                task.mark_completed(combined_result)
-            else:
-                task.mark_failed(combined_result.error)
-            
-            return combined_result
-            
         except Exception as e:
-            error_msg = f"Coordinated task execution failed: {e}"
-            self.logger.error(error_msg)
-            
-            return TaskResult(
-                task_id=task.id,
-                agent_id="orchestrator",
-                success=False,
-                output="",
-                error=error_msg
-            )
-        
-        finally:
-            # Mark all agents as available again
-            for agent_session in routing_decision.all_agents:
-                agent_session.mark_available()
+            self.logger.error(f"Plan execution failed: {e}")
+            raise
     
-    def _create_supporting_task(self, original_task: Task, agent_session: AgentSession, 
-                               primary_result: TaskResult) -> Task:
-        """Create a focused task for a supporting agent"""
+    async def create_execution_plan(self, commands: List[str], 
+                                  context: Optional[Dict[str, Any]] = None) -> ExecutionPlan:
+        """Create an execution plan from multiple commands"""
+        self.logger.info(f"Creating execution plan for {len(commands)} commands")
         
-        # Customize the task based on agent type and focus areas
-        focus_context = f"Focus on {', '.join(agent_session.agent_config.focus_areas)} aspects"
+        tasks = []
+        context = context or {}
         
-        supporting_command = f"""
-{focus_context} of this task:
-
-Original request: {original_task.command}
-
-Primary agent results: {primary_result.output[:300]}...
-
-Please provide {agent_session.agent_config.name}-specific contributions to complete this task.
-        """.strip()
+        # Convert commands to tasks
+        for command in commands:
+            intent = await self.intent_classifier.classify_intent(command, context)
+            task = Task.from_intent(intent, command)
+            tasks.append(task)
         
-        supporting_task = Task(
-            command=supporting_command,
-            task_type=original_task.task_type,
-            complexity_score=original_task.complexity_score * 0.6,  # Supporting tasks are generally simpler
-            estimated_duration=original_task.estimated_duration // 2,  # Supporting tasks take less time
-            affected_areas=original_task.affected_areas,
-            requires_reasoning=False,  # Supporting tasks don't need additional reasoning
-            requires_coordination=False  # Supporting tasks are focused
+        # Create basic execution plan
+        # The coordination engine will handle conflict detection and resolution
+        plan = ExecutionPlan(
+            id=f"plan_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}",
+            tasks=tasks,
+            parallel_groups=None,  # Let coordination engine determine this
+            estimated_duration=sum(task.estimated_duration or 60 for task in tasks)
         )
         
-        supporting_task.assigned_agent_id = agent_session.id
-        return supporting_task
+        return plan
     
-    async def _execute_supporting_tasks(self, supporting_tasks: List[tuple]) -> List[TaskResult]:
-        """Execute supporting tasks in parallel"""
-        async def execute_single_supporting_task(agent_session: AgentSession, task: Task) -> TaskResult:
-            agent = self.agent_registry.get_agent_by_id(agent_session.id)
-            if agent:
-                return await agent.execute_task(task)
-            else:
-                return TaskResult(
-                    task_id=task.id,
-                    agent_id=agent_session.id,
-                    success=False,
-                    output="",
-                    error="Agent not found"
-                )
-        
-        # Execute all supporting tasks concurrently
-        tasks = [
-            execute_single_supporting_task(agent_session, task)
-            for agent_session, task in supporting_tasks
-        ]
-        
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        # Convert exceptions to failed TaskResults
-        processed_results = []
-        for result in results:
-            if isinstance(result, Exception):
-                processed_results.append(TaskResult(
-                    task_id="error",
-                    agent_id="unknown",
-                    success=False,
-                    output="",
-                    error=str(result)
-                ))
-            else:
-                processed_results.append(result)
-        
-        return processed_results
-    
-    def _combine_coordination_results(self, task: Task, primary_result: TaskResult,
-                                     supporting_results: List[TaskResult],
-                                     reasoning_result: Optional[TaskResult]) -> TaskResult:
-        """Combine results from coordinated execution"""
-        
-        # Build combined output
-        output_parts = []
-        
-        # Add reasoning context if available
-        if reasoning_result and reasoning_result.success:
-            output_parts.append("🧠 REASONING & ANALYSIS")
-            output_parts.append(reasoning_result.output)
-            output_parts.append("")
-        
-        # Add primary result
-        output_parts.append("🎯 PRIMARY IMPLEMENTATION")
-        output_parts.append(primary_result.output)
-        output_parts.append("")
-        
-        # Add supporting results
-        if supporting_results:
-            successful_supporting = [r for r in supporting_results if r.success]
-            if successful_supporting:
-                output_parts.append("🤝 SUPPORTING CONTRIBUTIONS")
-                for i, result in enumerate(successful_supporting):
-                    output_parts.append(f"Support {i+1}:")
-                    output_parts.append(result.output)
-                    output_parts.append("")
-        
-        # Determine overall success
-        overall_success = primary_result.success
-        
-        # Collect any errors
-        errors = []
-        if not primary_result.success:
-            errors.append(f"Primary: {primary_result.error}")
-        
-        for result in supporting_results:
-            if not result.success:
-                errors.append(f"Supporting: {result.error}")
-        
-        combined_output = "\n".join(output_parts)
-        combined_error = "; ".join(errors) if errors else ""
-        
-        return TaskResult(
-            task_id=task.id,
-            agent_id="orchestrator",
-            success=overall_success,
-            output=combined_output,
-            error=combined_error
-        )
-    
-    async def get_agent_status(self) -> Dict[str, dict]:
+    def get_agent_status(self) -> Dict[str, Any]:
         """Get status of all agents"""
-        return await self.agent_registry.get_agent_status()
+        return {
+            "total_agents": len(self.agent_registry.get_all_agents()),
+            "available_agents": len(self.agent_registry.get_available_agents()),
+            "agent_details": self.shared_memory.get_all_agent_status()
+        }
     
-    async def spawn_agent(self, agent_type: str, name: str, focus_areas: List[str]) -> bool:
-        """Manually spawn a new agent"""
+    def get_system_status(self) -> Dict[str, Any]:
+        """Get overall system status"""
+        return {
+            "initialized": self._is_initialized,
+            "project_analyzed": self._project_structure is not None,
+            "project_name": self._project_structure.project_name if self._project_structure else None,
+            "agents": self.get_agent_status(),
+            "active_executions": len(self.coordination_engine.get_active_executions()),
+            "recent_changes": len(self.shared_memory.get_recent_changes()),
+            "task_progress": len(self.shared_memory.get_all_task_progress())
+        }
+    
+    def get_recent_activity(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get recent system activity"""
+        changes = self.shared_memory.get_recent_changes(limit)
+        task_progress = self.shared_memory.get_all_task_progress()
+        
+        # Combine and sort by timestamp
+        activity = []
+        
+        # Add recent changes
+        for change in changes:
+            activity.append({
+                "type": "change",
+                "timestamp": change["timestamp"],
+                "description": change["description"],
+                "agent_id": change["agent_id"],
+                "files": change["files"]
+            })
+        
+        # Add recent task completions
+        for task_id, progress in task_progress.items():
+            if progress.get("status") == "completed" and "completed_at" in progress:
+                activity.append({
+                    "type": "task_completion",
+                    "timestamp": progress["completed_at"],
+                    "description": f"Task {task_id} completed",
+                    "task_id": task_id,
+                    "progress": progress
+                })
+        
+        # Sort by timestamp (newest first) and limit
+        activity.sort(key=lambda x: x["timestamp"], reverse=True)
+        return activity[:limit]
+    
+    async def spawn_agent_session(self, agent_type: str, config: Optional[Dict[str, Any]] = None) -> AgentSession:
+        """Spawn a new agent session"""
+        if not self._is_initialized:
+            raise RuntimeError("Orchestrator not initialized. Call initialize() first.")
+        
         try:
-            from agentic.models.agent import AgentConfig, AgentType
-            
-            # Convert string to AgentType enum
-            try:
-                enum_type = AgentType(agent_type.upper())
-            except ValueError:
-                self.logger.error(f"Invalid agent type: {agent_type}")
-                return False
-            
-            config = AgentConfig(
-                agent_type=enum_type,
-                name=name,
-                workspace_path=self.workspace_path,
-                focus_areas=focus_areas,
-                ai_model_config={"model": "claude-3-5-sonnet"}
-            )
-            
-            session = await self.agent_registry.spawn_agent(config)
-            if session.status == "active":
-                self.active_sessions.append(session)
-                return True
-            
-            return False
+            session = await self.agent_registry.spawn_agent(agent_type, config or {})
+            self.logger.info(f"Spawned new {agent_type} agent: {session.id}")
+            return session
             
         except Exception as e:
-            self.logger.error(f"Failed to spawn agent: {e}")
+            self.logger.error(f"Failed to spawn {agent_type} agent: {e}")
+            raise
+    
+    async def stop_agent_session(self, session_id: str) -> bool:
+        """Stop an agent session"""
+        try:
+            success = await self.agent_registry.stop_agent(session_id)
+            if success:
+                self.logger.info(f"Stopped agent session: {session_id}")
+            else:
+                self.logger.warning(f"Failed to stop agent session: {session_id}")
+            return success
+            
+        except Exception as e:
+            self.logger.error(f"Error stopping agent session {session_id}: {e}")
             return False
     
-    async def terminate_agent(self, agent_name: str) -> bool:
-        """Terminate a specific agent by name"""
-        for session in self.active_sessions:
-            if session.agent_config.name == agent_name:
-                success = await self.agent_registry.terminate_agent(session.id)
-                if success:
-                    self.active_sessions.remove(session)
-                return success
+    async def get_project_analysis(self) -> Optional[ProjectStructure]:
+        """Get the current project analysis"""
+        return self._project_structure
+    
+    async def refresh_project_analysis(self, project_path: Path) -> ProjectStructure:
+        """Refresh the project analysis"""
+        self.logger.info("Refreshing project analysis...")
         
-        self.logger.warning(f"Agent '{agent_name}' not found")
-        return False
+        try:
+            self._project_structure = await self.project_analyzer.analyze_project(project_path)
+            self.shared_memory.set_project_structure(self._project_structure)
+            
+            self.logger.info(f"Project analysis refreshed: {self._project_structure.project_name}")
+            return self._project_structure
+            
+        except Exception as e:
+            self.logger.error(f"Failed to refresh project analysis: {e}")
+            raise
     
-    async def terminate_all_agents(self) -> int:
-        """Terminate all active agents"""
-        count = await self.agent_registry.terminate_all_agents()
-        self.active_sessions.clear()
-        return count
+    async def _background_maintenance(self) -> None:
+        """Background maintenance tasks"""
+        while True:
+            try:
+                # Clean up old tasks and messages
+                await asyncio.sleep(300)  # Run every 5 minutes
+                
+                # Cleanup tasks
+                cleaned_tasks = self.shared_memory.cleanup_completed_tasks(older_than_hours=24)
+                cleaned_messages = self.shared_memory.cleanup_old_messages(older_than_hours=1)
+                cleaned_locks = await self.shared_memory.cleanup_stale_file_locks(threshold_minutes=30)
+                
+                if cleaned_tasks or cleaned_messages or cleaned_locks:
+                    self.logger.debug(f"Maintenance: cleaned {cleaned_tasks} tasks, "
+                                    f"{cleaned_messages} messages, {cleaned_locks} locks")
+                
+                # Check for stale agents
+                stale_agents = self.shared_memory.get_stale_agents(threshold_minutes=10)
+                for agent_id in stale_agents:
+                    self.logger.warning(f"Agent {agent_id} appears to be stale")
+                    # Could implement auto-restart logic here
+                
+            except Exception as e:
+                self.logger.error(f"Background maintenance error: {e}")
+                await asyncio.sleep(60)  # Wait before retrying
     
-    async def health_check(self) -> Dict[str, bool]:
-        """Perform health check on all components"""
-        health_status = {
-            "orchestrator": True,
-            "project_analyzer": True,
-            "agent_registry": len(self.active_sessions) > 0,
-            "command_router": True,
-        }
+    async def shutdown(self) -> None:
+        """Gracefully shutdown the orchestrator"""
+        self.logger.info("Shutting down orchestrator...")
         
-        # Check individual agents
-        agent_health = await self.agent_registry.health_check_all()
-        health_status.update(agent_health)
-        
-        return health_status
-    
-    @property
-    def is_ready(self) -> bool:
-        """Check if orchestrator is ready to execute commands"""
-        return self.is_initialized and len(self.active_sessions) > 0
-    
-    @property
-    def agent_count(self) -> int:
-        """Get count of active agents"""
-        return len(self.active_sessions) 
+        try:
+            # Stop all agents
+            active_agents = self.agent_registry.get_all_agents()
+            for agent in active_agents:
+                await self.agent_registry.stop_agent(agent.id)
+            
+            # Cancel any active executions
+            active_executions = self.coordination_engine.get_active_executions()
+            if active_executions:
+                self.logger.warning(f"Cancelling {len(active_executions)} active executions")
+                # In a real implementation, we'd gracefully cancel these
+            
+            self.logger.info("Orchestrator shutdown complete")
+            
+        except Exception as e:
+            self.logger.error(f"Error during shutdown: {e}")
+            raise 
