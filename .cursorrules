@@ -1,0 +1,724 @@
+{
+  "name": "Ultimate Python Professional Standards",
+  "version": "1.0.0",
+  "description": "Comprehensive rules for high-quality Python development with Agentic project focus",
+  "rules": [
+    {
+      "name": "verification-before-completion",
+      "description": "Prevent false signals of completion and ensure thorough work",
+      "patterns": [
+        {
+          "require": "# Verified: All requirements implemented|# Verified: Complete",
+          "for": "completed tasks",
+          "message": "Add explicit verification comment when work is truly complete"
+        },
+        {
+          "discourage": "# TODO: Implement remaining|# Still need to",
+          "in": "pull_request_template.md",
+          "message": "Don't mark PRs as complete if TODOs remain"
+        },
+        {
+          "encourage": "checklist:\\s*- \\[[xX ]\\]",
+          "in": "**/*.md",
+          "message": "Use checklists in documentation to track completion status"
+        },
+        {
+          "encourage": "def assert_complete\\(\\):",
+          "message": "Consider adding assertion helpers to verify implementation completeness"
+        },
+        {
+          "encourage": "def test_\\w+_implements_all_requirements\\(",
+          "in": "**/*test*.py",
+          "message": "Add comprehensive tests that verify all requirements are met"
+        },
+        {
+          "prohibit": "# Partially implemented",
+          "for": "production code",
+          "message": "Don't commit partially implemented features without clear tracking"
+        }
+      ]
+    },
+    {
+      "name": "refactor-documentation",
+      "description": "Document and track multi-phase refactors",
+      "patterns": [
+        {
+          "require": "refactor-\\w+\\.md",
+          "for": "multi-phase refactors",
+          "message": "Create a dedicated markdown file to track multi-phase refactors"
+        },
+        {
+          "require": "# Refactor Plan|## Refactor Plan",
+          "in": "**/*refactor*.md",
+          "message": "Include a clear plan section in refactor documentation"
+        },
+        {
+          "require": "- \\[[xX ]\\]",
+          "in": "**/*refactor*.md",
+          "message": "Use checklists to track refactor progress"
+        },
+        {
+          "encourage": "## Phase \\d+:|### Phase \\d+:",
+          "in": "**/*refactor*.md",
+          "message": "Break down refactors into clear phases"
+        },
+        {
+          "encourage": "\\*\\*Current Status\\*\\*:",
+          "in": "**/*refactor*.md",
+          "message": "Include current status section in refactoring docs"
+        },
+        {
+          "encourage": "# Part of refactor: [\\w-]+",
+          "message": "Reference the refactor name in code comments for traceability"
+        }
+      ]
+    },
+    {
+      "name": "context-completeness",
+      "description": "Ensure sufficient context is gathered before making changes",
+      "patterns": [
+        {
+          "encourage": "# Context verification complete",
+          "for": "significant changes",
+          "message": "Verify that you have complete context before proceeding with changes"
+        },
+        {
+          "encourage": "# Files analyzed: \\d+",
+          "message": "Document scope of analysis to ensure adequate context"
+        },
+        {
+          "discourage": "# Assuming this works",
+          "message": "Don't make assumptions; verify behavior before changing code"
+        },
+        {
+          "encourage": "# Dependencies checked:",
+          "message": "Document that dependencies have been reviewed before changes"
+        },
+        {
+          "encourage": "# References: \\[.+\\]",
+          "message": "List references to related code to demonstrate complete context"
+        },
+        {
+          "encourage": "# Full context validation:",
+          "for": "critical systems",
+          "message": "For critical systems, explicitly validate complete context"
+        }
+      ]
+    },
+    {
+      "name": "no-hacky-solutions",
+      "description": "Prevent hacky workarounds in favor of proper solutions",
+      "patterns": [
+        {
+          "prohibit": "# HACK:|# FIXME:|# TODO: Temporary workaround",
+          "message": "Fix core issues properly instead of using hacky workarounds"
+        },
+        {
+          "prohibit": "# This is a temporary solution",
+          "message": "Implement proper solutions instead of temporary workarounds"
+        },
+        {
+          "discourage": "eval\\(",
+          "message": "Never use eval() - implement a proper solution instead"
+        },
+        {
+          "prohibit": "# Bypass|# Workaround|# Quick fix",
+          "message": "Don't bypass or work around issues; fix them properly"
+        },
+        {
+          "discourage": "try:\\s*[^\\n]+\\s*except[^:]*:\\s*pass",
+          "message": "Don't silently catch errors; handle them properly"
+        },
+        {
+          "discourage": "# type: ignore|# noqa|# pylint: disable",
+          "message": "Don't ignore type checker or linter warnings; fix the underlying issues"
+        },
+        {
+          "prohibit": "import os; os\\.system\\(",
+          "message": "Don't use os.system; use subprocess or proper process management"
+        }
+      ]
+    },
+    {
+      "name": "own-the-codebase",
+      "description": "Encourage ownership of all code rather than working around limitations",
+      "patterns": [
+        {
+          "discourage": "# We can't change this because",
+          "message": "Don't assume code can't be changed; we own the entire codebase"
+        },
+        {
+          "discourage": "# External library limitation",
+          "message": "Consider forking or patching external code if it doesn't meet our needs"
+        },
+        {
+          "discourage": "# Copy-pasted from",
+          "message": "Don't copy-paste code; refactor for reusability"
+        },
+        {
+          "discourage": "# Can't fix this now",
+          "message": "Fix issues when they arise rather than postponing them"
+        }
+      ]
+    },
+    {
+      "name": "use-cli-tools",
+      "description": "Prefer using CLI tools over manual approaches",
+      "patterns": [
+        {
+          "encourage": "poetry add|poetry install|poetry run",
+          "message": "Use Poetry for dependency management"
+        },
+        {
+          "encourage": "pip install -e \\.|pip install -r requirements\\.txt",
+          "message": "Use proper pip installation commands"
+        },
+        {
+          "encourage": "python -m pytest|pytest",
+          "message": "Use pytest for testing"
+        },
+        {
+          "encourage": "python -m black|black \\.|python -m isort",
+          "message": "Use black and isort for code formatting"
+        },
+        {
+          "encourage": "python -m mypy|mypy",
+          "message": "Use mypy for type checking"
+        },
+        {
+          "discourage": "mkdir -p src/\\w+",
+          "message": "Use project scaffolding tools instead of manual directory creation"
+        }
+      ]
+    },
+    {
+      "name": "strict-typing",
+      "description": "Enforce strict typing throughout the codebase",
+      "patterns": [
+        {
+          "require": "from typing import|from __future__ import annotations",
+          "for": "type annotations",
+          "message": "Import typing constructs for proper type annotations"
+        },
+        {
+          "prohibit": "-> Any|: Any[\\]\\s]*\\)|def \\w+\\([^)]*\\) ->(?!\\s*(None|bool|int|str|float|list|dict|tuple|set))",
+          "message": "Avoid Any type. Use specific types, generics, or protocols instead"
+        },
+        {
+          "require": "def \\w+\\([^)]*\\) -> [A-Za-z_]",
+          "for": "function definitions",
+          "message": "All functions must have return type annotations"
+        },
+        {
+          "require": "\\w+: [A-Za-z_][A-Za-z0-9_]*",
+          "for": "class attributes",
+          "message": "Class attributes should have type annotations"
+        },
+        {
+          "encourage": "from typing import Protocol",
+          "message": "Use Protocol for structural typing instead of inheritance"
+        }
+      ]
+    },
+    {
+      "name": "pydantic-schema-first",
+      "description": "Prefer Pydantic models for data validation and serialization",
+      "patterns": [
+        {
+          "encourage": "from pydantic import BaseModel, Field",
+          "message": "Import Pydantic for data models and validation"
+        },
+        {
+          "encourage": "class \\w+\\(BaseModel\\):",
+          "message": "Use Pydantic BaseModel for data structures"
+        },
+        {
+          "encourage": "\\w+: [A-Za-z_]+ = Field\\(",
+          "message": "Use Pydantic Field for validation and metadata"
+        },
+        {
+          "discourage": "import dataclasses|@dataclass",
+          "message": "For data models with validation, prefer Pydantic over dataclasses"
+        },
+        {
+          "encourage": "\\.model_validate\\(|\\.model_dump\\(",
+          "message": "Use Pydantic v2 methods for validation and serialization"
+        }
+      ]
+    },
+    {
+      "name": "file-naming-conventions",
+      "description": "Enforce consistent file naming conventions",
+      "patterns": [
+        {
+          "require": "^[a-z][a-z0-9_]*\\.py$",
+          "message": "Use snake_case for Python file names"
+        },
+        {
+          "require": "\\.(service|util|model|schema|types|api|test|spec)\\.py$",
+          "for": "specialized files",
+          "message": "Include purpose as suffix in specialized file names"
+        },
+        {
+          "require": "^__init__\\.py$",
+          "for": "package files",
+          "message": "Use __init__.py for package initialization"
+        },
+        {
+          "require": "^test_\\w+\\.py$|\\w+_test\\.py$",
+          "for": "test files",
+          "message": "Test files should be prefixed with test_ or suffixed with _test"
+        }
+      ]
+    },
+    {
+      "name": "functional-programming",
+      "description": "Encourage functional programming patterns",
+      "patterns": [
+        {
+          "encourage": "def \\w+\\([^)]*\\) -> [A-Za-z_]",
+          "message": "Use functions with explicit return types"
+        },
+        {
+          "encourage": "map\\(|filter\\(|reduce\\(|itertools\\.",
+          "message": "Use functional programming constructs from itertools and builtins"
+        },
+        {
+          "discourage": "for \\w+ in range\\(len\\(",
+          "message": "Use enumerate() or direct iteration instead of range(len())"
+        },
+        {
+          "encourage": "list\\[\\w+\\]|dict\\[\\w+, \\w+\\]|tuple\\[",
+          "message": "Use built-in generic types for containers"
+        },
+        {
+          "encourage": "from functools import",
+          "message": "Use functools for functional programming utilities"
+        }
+      ]
+    },
+    {
+      "name": "immutability",
+      "description": "Enforce immutability principles",
+      "patterns": [
+        {
+          "encourage": "from typing import Final",
+          "message": "Use Final for constants that should not change"
+        },
+        {
+          "encourage": "\\w+: Final\\[",
+          "message": "Use Final type annotation for immutable values"
+        },
+        {
+          "encourage": "frozen=True",
+          "in": "class.*BaseModel",
+          "message": "Use frozen=True for immutable Pydantic models"
+        },
+        {
+          "encourage": "tuple\\[|frozenset\\[",
+          "message": "Use immutable containers like tuple and frozenset"
+        },
+        {
+          "discourage": "\\.append\\(|\\.extend\\(|\\.pop\\(",
+          "message": "Avoid mutating operations; use immutable patterns instead"
+        }
+      ]
+    },
+    {
+      "name": "error-handling",
+      "description": "Implement robust error handling",
+      "patterns": [
+        {
+          "require": "try:\\s*[^\\n]*\\s*except [A-Za-z_]",
+          "for": "risky operations",
+          "message": "Use specific exception types in except clauses"
+        },
+        {
+          "discourage": "except:\\s*|except Exception:\\s*pass",
+          "message": "Don't catch all exceptions silently; handle specific errors"
+        },
+        {
+          "encourage": "class \\w+Error\\(Exception\\):",
+          "message": "Define custom exception classes for better error identification"
+        },
+        {
+          "encourage": "raise \\w+Error\\(",
+          "message": "Raise specific exception types with descriptive messages"
+        },
+        {
+          "encourage": "from typing import Union, Optional",
+          "message": "Use Union/Optional types for functions that might fail"
+        },
+        {
+          "encourage": "import logging",
+          "message": "Use logging module for error tracking"
+        }
+      ]
+    },
+    {
+      "name": "async-patterns",
+      "description": "Consistent async/await patterns",
+      "patterns": [
+        {
+          "encourage": "async def \\w+\\(",
+          "message": "Use async def for asynchronous functions"
+        },
+        {
+          "require": "await ",
+          "for": "async function calls",
+          "message": "Always use await with async function calls"
+        },
+        {
+          "encourage": "import asyncio",
+          "message": "Import asyncio for async programming"
+        },
+        {
+          "encourage": "async with ",
+          "message": "Use async context managers for resource management"
+        },
+        {
+          "discourage": "\\.result\\(\\)|\\.wait\\(\\)",
+          "message": "Use await instead of .result() or .wait() with async operations"
+        }
+      ]
+    },
+    {
+      "name": "fastapi-patterns",
+      "description": "Enforce FastAPI best practices",
+      "patterns": [
+        {
+          "encourage": "from fastapi import FastAPI, Depends",
+          "message": "Use FastAPI framework with dependency injection"
+        },
+        {
+          "encourage": "@app\\.(get|post|put|delete|patch)\\(",
+          "message": "Use FastAPI decorators for HTTP endpoints"
+        },
+        {
+          "encourage": "response_model=\\w+",
+          "message": "Use response_model for API endpoint type safety"
+        },
+        {
+          "encourage": "def \\w+\\([^)]*\\) -> [A-Za-z_]",
+          "in": "**/*api*.py",
+          "message": "API functions should have return type annotations"
+        },
+        {
+          "discourage": "from flask import Flask",
+          "message": "Use FastAPI instead of Flask for new API projects"
+        }
+      ]
+    },
+    {
+      "name": "click-cli-patterns",
+      "description": "Enforce Click CLI best practices",
+      "patterns": [
+        {
+          "encourage": "import click",
+          "message": "Use Click for command-line interfaces"
+        },
+        {
+          "encourage": "@click\\.(command|group)\\(",
+          "message": "Use Click decorators for CLI commands"
+        },
+        {
+          "encourage": "@click\\.option\\(|@click\\.argument\\(",
+          "message": "Use Click decorators for command options and arguments"
+        },
+        {
+          "encourage": "click\\.echo\\(|click\\.secho\\(",
+          "message": "Use Click's echo functions for output"
+        },
+        {
+          "discourage": "import argparse",
+          "message": "Use Click instead of argparse for CLI applications"
+        }
+      ]
+    },
+    {
+      "name": "sqlalchemy-patterns",
+      "description": "Enforce SQLAlchemy best practices",
+      "patterns": [
+        {
+          "encourage": "from sqlalchemy\\.orm import DeclarativeBase",
+          "message": "Use SQLAlchemy 2.0+ DeclarativeBase"
+        },
+        {
+          "encourage": "class \\w+\\(DeclarativeBase\\):",
+          "message": "Inherit from DeclarativeBase for SQLAlchemy models"
+        },
+        {
+          "encourage": "Mapped\\[\\w+\\]",
+          "message": "Use SQLAlchemy 2.0+ Mapped type annotations"
+        },
+        {
+          "encourage": "mapped_column\\(",
+          "message": "Use mapped_column() for SQLAlchemy 2.0+ columns"
+        },
+        {
+          "discourage": "Column\\(|Integer\\(|String\\(",
+          "message": "Use SQLAlchemy 2.0+ mapped_column instead of legacy Column"
+        }
+      ]
+    },
+    {
+      "name": "dependency-injection",
+      "description": "Enforce proper dependency injection patterns",
+      "patterns": [
+        {
+          "encourage": "def __init__\\(self, [^)]*: [A-Za-z_]",
+          "message": "Use constructor injection with type annotations"
+        },
+        {
+          "discourage": "= \\w+\\(\\)",
+          "in": "__init__",
+          "message": "Avoid direct instantiation in constructors; use dependency injection"
+        },
+        {
+          "encourage": "from abc import ABC, abstractmethod",
+          "message": "Define abstract base classes for interfaces"
+        },
+        {
+          "encourage": "class \\w+Protocol\\(Protocol\\):",
+          "message": "Use Protocol for dependency interfaces"
+        }
+      ]
+    },
+    {
+      "name": "project-structure",
+      "description": "Enforce consistent project structure",
+      "patterns": [
+        {
+          "require": "pyproject\\.toml|setup\\.py",
+          "message": "Project should have proper packaging configuration"
+        },
+        {
+          "require": "src/\\w+/__init__\\.py",
+          "message": "Use src/ layout for Python packages"
+        },
+        {
+          "encourage": "tests/test_\\w+\\.py",
+          "message": "Tests should be in tests/ directory with test_ prefix"
+        },
+        {
+          "require": "requirements\\.txt|poetry\\.lock",
+          "message": "Project should have dependency management"
+        }
+      ]
+    },
+    {
+      "name": "testing-standards",
+      "description": "Enforce comprehensive testing practices",
+      "patterns": [
+        {
+          "require": "import pytest",
+          "in": "**/*test*.py",
+          "message": "Use pytest for testing framework"
+        },
+        {
+          "require": "def test_\\w+\\(",
+          "in": "**/*test*.py",
+          "message": "Test functions should start with test_"
+        },
+        {
+          "require": "assert ",
+          "in": "**/*test*.py",
+          "message": "Include assertions in tests"
+        },
+        {
+          "encourage": "@pytest\\.fixture",
+          "message": "Use pytest fixtures for test setup"
+        },
+        {
+          "encourage": "@pytest\\.mark\\.",
+          "message": "Use pytest markers to categorize tests"
+        },
+        {
+          "discourage": "def test_\\w+\\([^)]*\\):\\s*pass",
+          "message": "Don't commit empty test functions"
+        }
+      ]
+    },
+    {
+      "name": "documentation",
+      "description": "Ensure adequate code documentation",
+      "patterns": [
+        {
+          "encourage": "\"\"\".+\"\"\"",
+          "for": "functions and classes",
+          "message": "Use docstrings for functions and classes"
+        },
+        {
+          "require": "class \\w+:[\\s]*\"\"\".+\"\"\"",
+          "for": "public classes",
+          "message": "Public classes must have docstrings"
+        },
+        {
+          "require": "def \\w+\\([^)]*\\):[\\s]*\"\"\".+\"\"\"",
+          "for": "public functions",
+          "message": "Public functions must have docstrings"
+        },
+        {
+          "encourage": "Args:|Returns:|Raises:",
+          "in": "docstrings",
+          "message": "Document function arguments, returns, and exceptions"
+        }
+      ]
+    },
+    {
+      "name": "logging-standards",
+      "description": "Enforce proper logging practices",
+      "patterns": [
+        {
+          "encourage": "import logging",
+          "message": "Use logging module for application logging"
+        },
+        {
+          "encourage": "logger = logging\\.getLogger\\(__name__\\)",
+          "message": "Create module-specific loggers"
+        },
+        {
+          "discourage": "print\\(",
+          "message": "Use logging instead of print statements for application output"
+        },
+        {
+          "encourage": "logger\\.(debug|info|warning|error|critical)\\(",
+          "message": "Use appropriate log levels"
+        }
+      ]
+    },
+    {
+      "name": "security-practices",
+      "description": "Enforce security best practices",
+      "patterns": [
+        {
+          "prohibit": "eval\\(|exec\\(",
+          "message": "Never use eval() or exec() for security reasons"
+        },
+        {
+          "discourage": "os\\.system\\(|subprocess\\.call\\(",
+          "message": "Use subprocess.run() with security considerations"
+        },
+        {
+          "encourage": "secrets\\.|os\\.urandom\\(",
+          "message": "Use secrets module for cryptographically secure random values"
+        },
+        {
+          "prohibit": "password.*=.*['\"].+['\"]",
+          "message": "Don't hardcode passwords in source code"
+        },
+        {
+          "encourage": "getenv\\(|environ\\.get\\(",
+          "message": "Use environment variables for sensitive configuration"
+        }
+      ]
+    },
+    {
+      "name": "performance-patterns",
+      "description": "Encourage performance best practices",
+      "patterns": [
+        {
+          "encourage": "from functools import lru_cache",
+          "message": "Use lru_cache for expensive function calls"
+        },
+        {
+          "encourage": "@lru_cache\\(maxsize=",
+          "message": "Specify maxsize for lru_cache decorators"
+        },
+        {
+          "discourage": "\\+ \\w+ \\+.*\\+ \\w+ \\+",
+          "message": "Use f-strings or join() instead of string concatenation"
+        },
+        {
+          "encourage": "f['\"].+{.+}",
+          "message": "Use f-strings for string formatting"
+        },
+        {
+          "discourage": "%s|%d|\\.format\\(",
+          "message": "Use f-strings instead of % formatting or .format()"
+        }
+      ]
+    },
+    {
+      "name": "file-safety-practices",
+      "description": "Enforce practices that prevent accidental file overwrites and data loss",
+      "patterns": [
+        {
+          "require": "Path\\(.+\\)\\.exists\\(\\)|os\\.path\\.exists\\(",
+          "for": "file creation or modification",
+          "message": "Check if files exist before creating or modifying them"
+        },
+        {
+          "encourage": "shutil\\.copy\\(.+, .+ \\+ '\\.bak'\\)",
+          "message": "Create backups before making significant changes to files"
+        },
+        {
+          "encourage": "try:\\s*Path\\(.+\\)\\.stat\\(\\)",
+          "message": "Use proper error handling when checking file properties"
+        },
+        {
+          "discourage": "open\\(.+, ['\"]w['\"]\\)",
+          "message": "Be cautious with write mode; consider using 'x' mode for new files"
+        },
+        {
+          "encourage": "with open\\(.+\\) as",
+          "message": "Always use context managers for file operations"
+        },
+        {
+          "encourage": "from pathlib import Path",
+          "message": "Use pathlib.Path for file path operations"
+        }
+      ]
+    }
+  ],
+  "advancedSettings": {
+    "fileExclusions": [
+      "__pycache__/**",
+      "*.pyc",
+      "*.pyo", 
+      "*.pyd",
+      ".tox/**",
+      ".coverage",
+      ".pytest_cache/**",
+      "dist/**",
+      "build/**",
+      "*.egg-info/**"
+    ],
+    "severityLevels": {
+      "prohibit": "error",
+      "require": "error", 
+      "encourage": "warning",
+      "discourage": "warning"
+    },
+    "autoFix": {
+      "enabled": true,
+      "safeOnly": true,
+      "useBlack": true,
+      "useIsort": true,
+      "useMypy": true
+    },
+    "fileSafetyChecks": {
+      "enabled": true,
+      "backupBeforeReplace": true,
+      "checkExistenceBeforeCreate": true,
+      "diffReviewForMajorChanges": true,
+      "useContextManagers": true
+    },
+    "completenessChecks": {
+      "enabled": true,
+      "requireVerificationComments": true,
+      "requireRefactorDocs": true,
+      "preventPartialCommits": true,
+      "requireTypeAnnotations": true,
+      "requireDocstrings": true
+    },
+    "pythonSpecific": {
+      "enforceBlackFormatting": true,
+      "enforceMypyTypeChecking": true,
+      "enforcePytestTesting": true,
+      "preferPydanticModels": true,
+      "preferAsyncPatterns": true,
+      "requireVirtualEnvironment": true
+    }
+  }
+}
