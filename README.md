@@ -223,3 +223,125 @@ MIT License - see [LICENSE](LICENSE) for details.
 - **[Aider](https://github.com/paul-gauthier/aider)** - Pioneering AI pair programming
 - **[Claude Code](https://claude.ai/code)** - Advanced reasoning for coding
 - **[Anthropic](https://anthropic.com)
+
+## Features
+
+- **Multi-Agent Architecture**: Specialized agents for different development tasks
+- **Enhanced Claude Code Integration**: Full-featured Claude Code CLI integration with memory, sessions, and extended thinking
+- **Task Planning & Execution**: Intelligent task breakdown and parallel execution
+- **Git Integration**: Automated version control workflows
+- **Project Memory**: Persistent memory for project-specific conventions and preferences
+
+## Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/your-username/agentic.git
+cd agentic
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install Claude Code CLI (required for enhanced features)
+npm install -g @anthropic-ai/claude-code
+```
+
+## Quick Start
+
+```bash
+# Start an interactive session
+python -m agentic
+
+# Execute a specific task
+python -m agentic exec "analyze the architecture of this project"
+
+# Use enhanced Claude Code features
+python -m agentic claude "refactor the authentication module"
+```
+
+## Claude Code Integration
+
+Agentic provides enhanced Claude Code integration with advanced features:
+
+### Memory Management
+
+When you first use Claude Code with Agentic, it automatically creates a `CLAUDE.md` file with sensible defaults. You can customize this file for your project:
+
+```bash
+# Copy the comprehensive template
+cp examples/claude_memory_template.md CLAUDE.md
+
+# Add to .gitignore to keep preferences local
+echo "CLAUDE.md" >> .gitignore
+```
+
+### Best Practices
+
+1. **Keep Memory Local**: Add `CLAUDE.md` to your `.gitignore` - it should contain personal/team preferences, not be committed to tool repos
+2. **Customize for Your Project**: Use the template in `examples/claude_memory_template.md` as a starting point
+3. **Session Persistence**: Complex tasks automatically use session IDs for multi-turn conversations
+4. **Extended Thinking**: Architecture and refactoring tasks automatically trigger deeper analysis
+
+### Example Memory Setup
+
+```markdown
+# My Project - Claude Code Memory
+
+## Project Overview
+This is a React/Node.js e-commerce application.
+
+## Coding Standards
+- Use TypeScript for all new code
+- Follow ESLint configuration
+- Prefer functional components with hooks
+
+## Team Conventions
+- Use conventional commits
+- Squash merge pull requests
+- Always update tests with changes
+```
+
+## Architecture
+
+### Agents
+
+- **ClaudeCodeAgent**: Enhanced Claude Code CLI integration with memory and sessions
+- **GitAgent**: Git operations and workflow automation
+- **TaskPlannerAgent**: Intelligent task breakdown and coordination
+
+### Core Components
+
+- **Task Management**: Structured task representation with intent analysis
+- **Agent Coordination**: Multi-agent workflow orchestration
+- **Session Management**: Persistent sessions for complex multi-turn tasks
+- **Memory System**: Project-specific memory for conventions and preferences
+
+## Development
+
+```bash
+# Install development dependencies
+pip install -r requirements.txt
+
+# Run tests
+pytest
+
+# Format code
+black .
+isort .
+
+# Type checking
+mypy src/
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Ensure all tests pass
+6. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

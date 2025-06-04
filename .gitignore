@@ -134,3 +134,6 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Claude Code Personal Memory (keep project template CLAUDE_PROJECT.md committed)
+CLAUDE.md
