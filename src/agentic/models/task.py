@@ -21,6 +21,7 @@ class TaskType(str, Enum):
     EXPLAIN = "explain"
     TEST = "test"
     DOCUMENT = "document"
+    DEPLOY = "deploy"
 
 
 class TaskIntent(BaseModel):
