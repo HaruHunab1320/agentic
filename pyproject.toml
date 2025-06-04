@@ -59,7 +59,7 @@ Issues = "https://github.com/agentic-ai/agentic/issues"
 Source = "https://github.com/agentic-ai/agentic"
 
 [project.scripts]
-agentic = "agentic.cli:main"
+agentic = "agentic.cli:cli"
 
 [tool.hatch.version]
 path = "src/agentic/__init__.py"

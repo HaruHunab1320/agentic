@@ -15,7 +15,7 @@ def setup_logging(
     debug: bool = False,
     log_file: Optional[Path] = None,
     log_level: Optional[str] = None
-) -> None:
+) -> logging.Logger:
     """
     Set up logging for Agentic with Rich formatting
     
@@ -23,6 +23,9 @@ def setup_logging(
         debug: Enable debug logging
         log_file: Optional file to write logs to
         log_level: Override log level (DEBUG, INFO, WARNING, ERROR)
+        
+    Returns:
+        Logger instance for the main application
     """
     # Determine log level
     if log_level:
@@ -81,11 +84,13 @@ def setup_logging(
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
     
-    # Log startup message
+    # Get the main application logger to return
     logger = logging.getLogger("agentic")
     logger.debug(f"Logging initialized at level {logging.getLevelName(level)}")
     if log_file:
         logger.debug(f"Log file: {log_file}")
+    
+    return logger
 
 
 def get_logger(name: str) -> logging.Logger:

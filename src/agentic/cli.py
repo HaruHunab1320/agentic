@@ -273,23 +273,22 @@ def exec(ctx: click.Context, command: tuple, agent: str, context: str):
                 try:
                     result = await orchestrator.execute_command(
                         command=command_str,
-                        agent_filter=agent,
                         context=context
                     )
                     progress.remove_task(task)
                     
-                    if result and result.get('success'):
+                    if result and result.success:
                         console.print("[bold green]✅ Command executed successfully![/bold green]")
                         
                         # Display results
-                        if result.get('output'):
-                            console.print(f"\n[bold]Output:[/bold]\n{result['output']}")
+                        if result.output:
+                            console.print(f"\n[bold]Output:[/bold]\n{result.output}")
                         
-                        if result.get('agents_used'):
-                            console.print(f"\n[dim]Agents involved: {', '.join(result['agents_used'])}[/dim]")
+                        if result.agent_id:
+                            console.print(f"\n[dim]Agent used: {result.agent_id}[/dim]")
                             
                     else:
-                        error_msg = result.get('error', 'Unknown error') if result else 'No result returned'
+                        error_msg = result.error if result else 'No result returned'
                         console.print(f"[bold red]❌ Command failed: {error_msg}[/bold red]")
                         
                 except Exception as e:

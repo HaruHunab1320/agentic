@@ -116,6 +116,21 @@ class AgentRegistry(LoggerMixin):
         self.logger.info(f"Terminated {terminated_count} agents")
         return terminated_count
     
+    async def initialize(self) -> None:
+        """Initialize the agent registry"""
+        self.logger.info("Initializing agent registry...")
+        # Registry initialization is mostly done in __init__
+        # This method exists for compatibility with orchestrator
+        self.logger.info("Agent registry initialized")
+    
+    def get_all_agents(self) -> List[AgentSession]:
+        """Get all active agent sessions"""
+        return list(self.active_sessions.values())
+    
+    async def stop_agent(self, session_id: str) -> bool:
+        """Stop an agent (alias for terminate_agent for compatibility)"""
+        return await self.terminate_agent(session_id)
+    
     def get_agents_by_capability(self, capability: str) -> List[AgentSession]:
         """Find agents with specific capability"""
         matching_agents = []

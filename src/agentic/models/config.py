@@ -219,4 +219,26 @@ class AgenticConfig(BaseModel):
             include_tests=True,
             include_docs=True,
             log_level="INFO"
-        ) 
+        )
+    
+    @classmethod
+    def load_or_create(cls, workspace_path: Path) -> 'AgenticConfig':
+        """Load configuration from file or create default if not found"""
+        # Try to find existing configuration file
+        config_files = [
+            workspace_path / '.agentic' / 'config.yml',
+            workspace_path / '.agentic' / 'config.yaml',
+            workspace_path / 'agentic.yml',
+            workspace_path / 'agentic.yaml'
+        ]
+        
+        for config_file in config_files:
+            if config_file.exists():
+                try:
+                    return cls.load_from_yaml(config_file)
+                except Exception as e:
+                    # If loading fails, continue to try other files or create default
+                    continue
+        
+        # No valid configuration found, create default
+        return cls.create_default(workspace_path) 

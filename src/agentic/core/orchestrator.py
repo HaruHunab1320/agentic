@@ -35,8 +35,8 @@ class Orchestrator(LoggerMixin):
         self.config = config
         
         # Initialize core components
-        self.project_analyzer = ProjectAnalyzer()
-        self.agent_registry = AgentRegistry()
+        self.project_analyzer = None  # Will be initialized when needed with project_path
+        self.agent_registry = AgentRegistry(workspace_path=config.workspace_path)
         self.shared_memory = SharedMemory()
         self.intent_classifier = IntentClassifier()
         self.command_router = CommandRouter(self.agent_registry)
@@ -46,16 +46,22 @@ class Orchestrator(LoggerMixin):
         self._project_structure: Optional[ProjectStructure] = None
         self._is_initialized = False
     
-    async def initialize(self, project_path: Optional[Path] = None) -> None:
+    async def initialize(self, project_path: Optional[Path] = None) -> bool:
         """Initialize the orchestrator with project analysis"""
         try:
             self.logger.info("Initializing Agentic orchestrator...")
             
+            # Determine project path
+            if project_path is None:
+                project_path = self.config.workspace_path
+            
+            # Initialize project analyzer with project path
+            self.project_analyzer = ProjectAnalyzer(project_path)
+            
             # Analyze project structure
-            if project_path:
-                self._project_structure = await self.project_analyzer.analyze_project(project_path)
-                self.shared_memory.set_project_structure(self._project_structure)
-                self.logger.info(f"Project analyzed: {self._project_structure.project_name}")
+            self._project_structure = await self.project_analyzer.analyze()
+            self.shared_memory.set_project_structure(self._project_structure)
+            self.logger.info(f"Project analyzed: {self._project_structure.root_path.name}")
             
             # Initialize agent registry
             await self.agent_registry.initialize()
@@ -65,10 +71,11 @@ class Orchestrator(LoggerMixin):
             
             self._is_initialized = True
             self.logger.info("Orchestrator initialization complete")
+            return True
             
         except Exception as e:
             self.logger.error(f"Failed to initialize orchestrator: {e}")
-            raise
+            return False
     
     async def execute_command(self, command: str, context: Optional[Dict[str, Any]] = None) -> TaskResult:
         """Execute a single command"""
@@ -79,7 +86,7 @@ class Orchestrator(LoggerMixin):
         
         try:
             # Classify intent
-            intent = await self.intent_classifier.classify_intent(command, context or {})
+            intent = await self.intent_classifier.analyze_intent(command)
             self.logger.debug(f"Classified intent: {intent.task_type}")
             
             # Create task from intent
@@ -92,7 +99,7 @@ class Orchestrator(LoggerMixin):
                 return TaskResult(
                     task_id=task.id,
                     agent_id="none",
-                    success=False,
+                    status="failed",
                     output="",
                     error="No suitable agent found for command"
                 )
@@ -105,7 +112,7 @@ class Orchestrator(LoggerMixin):
                 return TaskResult(
                     task_id=task.id,
                     agent_id=best_agent.id,
-                    success=False,
+                    status="failed",
                     output="",
                     error="Agent instance not found"
                 )
@@ -122,7 +129,7 @@ class Orchestrator(LoggerMixin):
             return TaskResult(
                 task_id=task.id if 'task' in locals() else "unknown",
                 agent_id="orchestrator",
-                success=False,
+                status="failed",
                 output="",
                 error=str(e)
             )
@@ -158,7 +165,7 @@ class Orchestrator(LoggerMixin):
         
         # Convert commands to tasks
         for command in commands:
-            intent = await self.intent_classifier.classify_intent(command, context)
+            intent = await self.intent_classifier.analyze_intent(command)
             task = Task.from_intent(intent, command)
             tasks.append(task)
         
@@ -173,24 +180,62 @@ class Orchestrator(LoggerMixin):
         
         return plan
     
-    def get_agent_status(self) -> Dict[str, Any]:
-        """Get status of all agents"""
-        return {
-            "total_agents": len(self.agent_registry.get_all_agents()),
-            "available_agents": len(self.agent_registry.get_available_agents()),
-            "agent_details": self.shared_memory.get_all_agent_status()
-        }
+    @property
+    def agent_count(self) -> int:
+        """Get the number of active agents"""
+        return len(self.agent_registry.get_all_agents()) if self.agent_registry else 0
+    
+    @property
+    def is_ready(self) -> bool:
+        """Check if orchestrator is ready for operations"""
+        return self._is_initialized
+    
+    async def get_agent_status(self) -> Dict[str, Dict[str, Any]]:
+        """Get detailed status of all agents"""
+        if not self.agent_registry:
+            return {}
+        
+        agent_status = {}
+        all_agents = self.agent_registry.get_all_agents()
+        
+        for agent in all_agents:
+            agent_status[agent.id] = {
+                'name': agent.name,
+                'type': agent.agent_type.value if hasattr(agent.agent_type, 'value') else str(agent.agent_type),
+                'status': 'active',  # Default status
+                'focus_areas': getattr(agent, 'focus_areas', []),
+                'last_activity': None  # Could be enhanced later
+            }
+        
+        return agent_status
+    
+    async def health_check(self) -> Dict[str, bool]:
+        """Perform health check on all agents"""
+        if not self.agent_registry:
+            return {}
+        
+        health_status = {}
+        all_agents = self.agent_registry.get_all_agents()
+        
+        for agent in all_agents:
+            # Basic health check - could be enhanced with actual health status
+            health_status[agent.id] = True
+        
+        return health_status
     
     def get_system_status(self) -> Dict[str, Any]:
         """Get overall system status"""
         return {
             "initialized": self._is_initialized,
             "project_analyzed": self._project_structure is not None,
-            "project_name": self._project_structure.project_name if self._project_structure else None,
-            "agents": self.get_agent_status(),
-            "active_executions": len(self.coordination_engine.get_active_executions()),
-            "recent_changes": len(self.shared_memory.get_recent_changes()),
-            "task_progress": len(self.shared_memory.get_all_task_progress())
+            "project_name": self._project_structure.root_path.name if self._project_structure else None,
+            "agents": {
+                "total_agents": self.agent_count,
+                "available_agents": len(self.agent_registry.get_available_agents()) if self.agent_registry else 0
+            },
+            "active_executions": len(self.coordination_engine.get_active_executions()) if hasattr(self.coordination_engine, 'get_active_executions') else 0,
+            "recent_changes": len(self.shared_memory.get_recent_changes()) if hasattr(self.shared_memory, 'get_recent_changes') else 0,
+            "task_progress": len(self.shared_memory.get_all_task_progress()) if hasattr(self.shared_memory, 'get_all_task_progress') else 0
         }
     
     def get_recent_activity(self, limit: int = 10) -> List[Dict[str, Any]]:
@@ -263,10 +308,12 @@ class Orchestrator(LoggerMixin):
         self.logger.info("Refreshing project analysis...")
         
         try:
-            self._project_structure = await self.project_analyzer.analyze_project(project_path)
+            # Re-initialize project analyzer with new path
+            self.project_analyzer = ProjectAnalyzer(project_path)
+            self._project_structure = await self.project_analyzer.analyze()
             self.shared_memory.set_project_structure(self._project_structure)
             
-            self.logger.info(f"Project analysis refreshed: {self._project_structure.project_name}")
+            self.logger.info(f"Project analysis refreshed: {self._project_structure.root_path.name}")
             return self._project_structure
             
         except Exception as e:
