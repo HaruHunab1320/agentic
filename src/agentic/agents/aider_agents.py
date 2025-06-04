@@ -8,33 +8,148 @@ import asyncio
 import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional
+import os
+import re
 
-from agentic.models.agent import Agent, AgentConfig, AgentType
+from agentic.models.agent import Agent, AgentConfig, AgentType, AgentCapability
 from agentic.models.task import Task, TaskResult
 from agentic.utils.logging import LoggerMixin
 
 
-class BaseAiderAgent(Agent):
+class BaseAiderAgent(Agent, LoggerMixin):
     """Base class for Aider-based agents"""
     
     def __init__(self, config: AgentConfig):
-        super().__init__(config)
+        Agent.__init__(self, config)
+        LoggerMixin.__init__(self)
         self.aider_process: Optional[subprocess.Popen] = None
         self.aider_args: List[str] = []
         self._setup_aider_args()
     
     def _setup_aider_args(self) -> None:
         """Setup common Aider arguments"""
+        # Get model from config with intelligent defaults
+        model = self._get_model_for_aider()
+        
         self.aider_args = [
             "aider",
-            "--yes",  # Auto-confirm changes
+            "--yes-always",  # Auto-confirm changes
             "--no-git",  # Don't auto-commit
-            f"--model={self.config.ai_model_config.get('model', 'claude-3-5-sonnet')}",
+            f"--model={model}",
         ]
+        
+        # Add additional model-specific configurations
+        self._add_model_specific_args()
+        
+        # Set up API key environment variables
+        self._setup_api_keys()
         
         # Add focus area specific arguments
         if self.config.focus_areas:
             # For now, we'll use focus areas as hints in prompts rather than CLI args
+            pass
+    
+    def _setup_api_keys(self) -> None:
+        """Setup API keys from credential store"""
+        try:
+            from agentic.utils.credentials import get_api_key
+            
+            # Determine which provider we need based on model
+            model = self._get_model_for_aider()
+            
+            if "gemini" in model.lower() or "google" in model.lower():
+                provider = "gemini"
+                env_var = "GEMINI_API_KEY"
+            elif "claude" in model.lower() or "anthropic" in model.lower():
+                provider = "anthropic"
+                env_var = "ANTHROPIC_API_KEY"
+            elif "gpt" in model.lower() or "openai" in model.lower():
+                provider = "openai"
+                env_var = "OPENAI_API_KEY"
+            else:
+                # Default to trying all providers
+                return
+            
+            # Get API key from credential store
+            api_key = get_api_key(provider, self.config.workspace_path)
+            
+            if api_key:
+                # Set environment variable for this process
+                os.environ[env_var] = api_key
+            else:
+                # Warn user about missing API key
+                print(f"⚠️ Warning: No {provider.upper()} API key found.")
+                print(f"Set one with: agentic keys set {provider}")
+                
+        except ImportError:
+            # Credentials module not available, continue without setup
+            pass
+        except Exception as e:
+            # Log error but continue
+            pass
+    
+    def _get_model_for_aider(self) -> str:
+        """Get the appropriate model for Aider with intelligent fallbacks"""
+        model_config = self.config.ai_model_config
+        
+        # Primary model from config
+        primary_model = model_config.get('model', 'claude-3-5-sonnet')
+        
+        # Handle Gemini models - map to Aider's expected format
+        gemini_model_map = {
+            'gemini-1.5-pro': 'gemini/gemini-1.5-pro-latest',
+            'gemini-1.5-flash': 'gemini/gemini-1.5-flash-latest',
+            'gemini-pro': 'gemini/gemini-1.5-pro-latest',
+            'gemini-flash': 'gemini/gemini-1.5-flash-latest',
+            'gemini': 'gemini/gemini-1.5-pro-latest',  # Default Gemini
+        }
+        
+        # Handle Claude models - ensure correct format
+        claude_model_map = {
+            'claude': 'claude-3-5-sonnet',
+            'sonnet': 'claude-3-5-sonnet',
+            'haiku': 'claude-3-haiku',
+            'opus': 'claude-3-opus',
+        }
+        
+        # Handle OpenAI models
+        openai_model_map = {
+            'gpt-4': 'gpt-4-0125-preview',
+            'gpt-4o': 'gpt-4o',
+            'gpt-3.5': 'gpt-3.5-turbo',
+        }
+        
+        # Check if it's a mapped model
+        if primary_model in gemini_model_map:
+            return gemini_model_map[primary_model]
+        elif primary_model in claude_model_map:
+            return claude_model_map[primary_model]
+        elif primary_model in openai_model_map:
+            return openai_model_map[primary_model]
+        else:
+            # Return as-is, might be a fully qualified model name
+            return primary_model
+    
+    def _add_model_specific_args(self) -> None:
+        """Add model-specific arguments to Aider command"""
+        model = self.config.ai_model_config.get('model', 'claude-3-5-sonnet')
+        
+        # Gemini-specific configurations
+        if 'gemini' in model.lower():
+            # Gemini models work well with these settings
+            if self.config.ai_model_config.get('temperature'):
+                # Note: Not all Aider integrations support temperature via CLI
+                # But we can store it for future use
+                pass
+        
+        # Claude-specific configurations  
+        elif 'claude' in model.lower():
+            # Claude models can handle larger contexts
+            pass
+        
+        # OpenAI-specific configurations
+        elif 'gpt' in model.lower():
+            # OpenAI models might need specific timeout settings
             pass
     
     async def start(self) -> bool:
@@ -114,7 +229,7 @@ class BaseAiderAgent(Agent):
             return TaskResult(
                 task_id=task.id,
                 agent_id=self.session.id if self.session else "unknown",
-                success=False,
+                status="failed",
                 output="",
                 error=str(e)
             )
@@ -123,14 +238,47 @@ class BaseAiderAgent(Agent):
         """Prepare Aider command for the specific task"""
         command = self.aider_args.copy()
         
-        # Add working directory
-        command.extend(["--cwd", str(self.config.workspace_path)])
+        # Add target files if mentioned in the task
+        target_files = self._extract_target_files(task)
+        if target_files:
+            command.extend(target_files)
         
         # Add the actual command/prompt
         prompt = await self._build_agent_prompt(task)
         command.extend(["--message", prompt])
         
         return command
+    
+    def _extract_target_files(self, task: Task) -> List[str]:
+        """Extract target files mentioned in the task command"""
+        # Look for file patterns in the command
+        file_patterns = [
+            r'(\w+\.py)',  # Python files
+            r'(\w+\.js)',  # JavaScript files
+            r'(\w+\.ts)',  # TypeScript files
+            r'(\w+\.jsx)', # JSX files
+            r'(\w+\.tsx)', # TSX files
+            r'(\w+\.go)',  # Go files
+            r'(\w+\.rs)',  # Rust files
+            r'(\w+\.java)', # Java files
+            r'(\w+\.cpp)', # C++ files
+            r'(\w+\.c)',   # C files
+            r'(\w+\.h)',   # Header files
+        ]
+        
+        files = []
+        for pattern in file_patterns:
+            matches = re.findall(pattern, task.command, re.IGNORECASE)
+            files.extend(matches)
+        
+        # Check if files exist in workspace
+        existing_files = []
+        for file in files:
+            file_path = self.config.workspace_path / file
+            if file_path.exists():
+                existing_files.append(str(file))
+        
+        return existing_files
     
     async def _build_agent_prompt(self, task: Task) -> str:
         """Build agent-specific prompt for the task"""
@@ -157,12 +305,16 @@ class BaseAiderAgent(Agent):
         try:
             self.logger.debug(f"Running command: {' '.join(command)}")
             
+            # Prepare environment with current environment plus any API keys we've set
+            env = os.environ.copy()
+            
             # Run Aider command
             process = await asyncio.create_subprocess_exec(
                 *command,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                cwd=self.config.workspace_path
+                cwd=self.config.workspace_path,
+                env=env  # Pass the environment with API keys
             )
             
             stdout, stderr = await process.communicate()
@@ -185,7 +337,7 @@ class BaseAiderAgent(Agent):
             return TaskResult(
                 task_id=task.id,
                 agent_id=self.session.id if self.session else "unknown",
-                success=success,
+                status="completed" if success else "failed",
                 output=stdout_text,
                 error=stderr_text if not success else ""
             )
@@ -195,7 +347,7 @@ class BaseAiderAgent(Agent):
             return TaskResult(
                 task_id=task.id,
                 agent_id=self.session.id if self.session else "unknown",
-                success=False,
+                status="failed",
                 output="",
                 error=str(e)
             )
@@ -208,6 +360,19 @@ class BaseAiderAgent(Agent):
             return result.returncode == 0
         except Exception:
             return False
+    
+    def get_capabilities(self) -> AgentCapability:
+        """Get capabilities of this Aider agent"""
+        return AgentCapability(
+            agent_type=self.config.agent_type,
+            specializations=self.config.focus_areas,
+            supported_languages=["python", "javascript", "typescript", "go", "rust", "java"],
+            max_context_tokens=self.config.max_tokens,
+            concurrent_tasks=1,
+            reasoning_capability=True,
+            file_editing_capability=True,
+            code_execution_capability=False  # Aider doesn't execute code directly
+        )
 
 
 class AiderFrontendAgent(BaseAiderAgent):

@@ -1,21 +1,36 @@
-workspace_name: "agentic"
-workspace_path: "/Users/jakobgrant/Workspaces/agentic"
+agents:
+  aider_gemini:
+    agent_type: aider_backend
+    ai_model_config:
+      model: gemini
+    focus_areas:
+    - general
+    max_tokens: 100000
+    name: aider_gemini
+    temperature: 0.1
+    tool_config: {}
+    workspace_path: /Users/jakobgrant/Workspaces/agentic
 analysis_depth: standard
 auto_spawn_agents: true
 default_agents:
-  - claude_code
-max_concurrent_agents: 3
-include_tests: true
-include_docs: true
-log_level: INFO
+- claude_code
+fallback_model: claude-3-haiku
 ignore_patterns:
-  - "*.pyc"
-  - "__pycache__"
-  - ".git"
-  - "node_modules"
-  - "*.log"
-  - ".DS_Store"
-  - "*.tmp"
-  - "*.temp"
-
-# API Configuration (if environment variables are set)
+- '*.pyc'
+- __pycache__
+- .git
+- node_modules
+- '*.log'
+- .DS_Store
+- '*.tmp'
+- '*.temp'
+include_docs: true
+include_tests: true
+log_file: null
+log_level: INFO
+max_concurrent_agents: 3
+max_tokens: 100000
+primary_model: gemini
+temperature: 0.1
+workspace_name: agentic
+workspace_path: /Users/jakobgrant/Workspaces/agentic

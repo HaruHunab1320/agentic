@@ -345,3 +345,207 @@ mypy src/
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🤖 Model Configuration
+
+Agentic supports multiple AI models and makes it easy to configure them for different agents and tasks.
+
+### **Supported Models**
+
+#### **🌟 Gemini (Google)**
+- `gemini/gemini-1.5-pro-latest` - Latest Pro model (recommended)
+- `gemini/gemini-1.5-flash-latest` - Fast Flash model
+- `gemini-1.5-pro` - Alias for Pro model
+- `gemini` - Default Gemini alias
+
+#### **🧠 Claude (Anthropic)**  
+- `claude-3-5-sonnet` - Latest Sonnet model (default)
+- `claude-3-haiku` - Fast Haiku model
+- `claude-3-opus` - Most capable Opus model
+- `claude` - Default Claude alias
+
+#### **🤖 OpenAI**
+- `gpt-4o` - Latest GPT-4 Omni
+- `gpt-4-0125-preview` - GPT-4 Turbo
+- `gpt-3.5-turbo` - GPT-3.5 Turbo
+
+### **Quick Setup for Gemini**
+
+1. **Set your API key:**
+```bash
+export GOOGLE_API_KEY="your-gemini-api-key"
+# Or for Aider specifically:
+export GEMINI_API_KEY="your-gemini-api-key"
+```
+
+2. **Set Gemini as your default model:**
+```bash
+agentic model set gemini
+```
+
+3. **Test the configuration:**
+```bash
+agentic model test gemini
+```
+
+### **Model Configuration Commands**
+
+#### **List Available Models**
+```bash
+# See all supported models and current configuration
+agentic model list
+```
+
+#### **Set Model for All Agents**
+```bash
+# Set default model for all agents
+agentic model set gemini-1.5-pro
+agentic model set claude-3-5-sonnet
+agentic model set gpt-4o
+```
+
+#### **Set Model for Specific Agent**
+```bash
+# Set model for just the backend agent
+agentic model set gemini --agent backend
+
+# Set model for frontend agent
+agentic model set claude-3-5-sonnet --agent frontend
+```
+
+#### **Test Model Configuration**
+```bash
+# Test if a model is working correctly
+agentic model test gemini
+agentic model test claude-3-5-sonnet
+```
+
+### **Per-Project Configuration**
+
+Models can be configured per project via the `.agentic/config.yml` file:
+
+```yaml
+models:
+  primary_model: "gemini/gemini-1.5-pro-latest"
+  fallback_model: "claude-3-haiku"
+  temperature: 0.1
+  max_tokens: 100000
+
+agents:
+  backend:
+    ai_model_config:
+      model: "gemini-1.5-pro"
+  frontend:
+    ai_model_config:
+      model: "claude-3-5-sonnet"
+  testing:
+    ai_model_config:
+      model: "gpt-4o"
+```
+
+### **Environment Variables**
+
+You can also configure models via environment variables:
+
+```bash
+# Global model configuration
+export AGENTIC_PRIMARY_MODEL="gemini"
+export AGENTIC_TEMPERATURE="0.1"
+
+# Model-specific API keys
+export ANTHROPIC_API_KEY="your-anthropic-key"
+export OPENAI_API_KEY="your-openai-key"
+export GOOGLE_API_KEY="your-google-key"
+export GEMINI_API_KEY="your-gemini-key"  # Alternative for Gemini
+```
+
+### **Model Selection Best Practices**
+
+- **🚀 Gemini Flash**: Best for fast iterations and simple coding tasks
+- **🧠 Gemini Pro**: Excellent for complex reasoning and architecture decisions
+- **✨ Claude Sonnet**: Great balance of capability and speed for general coding
+- **🎯 Claude Haiku**: Fast and efficient for simple refactoring tasks
+- **💪 Claude Opus**: Most capable for complex system design
+- **🔥 GPT-4o**: Strong alternative with good coding capabilities
+
+## 🔐 API Key Setup
+
+Agentic supports **three secure methods** for managing API keys. Choose the one that works best for you:
+
+### **🏆 Method 1: Secure Storage (Recommended)**
+
+Uses your operating system's secure credential storage (Keychain on macOS, Credential Manager on Windows, Secret Service on Linux).
+
+```bash
+# Set API keys securely
+agentic keys set gemini          # For Gemini models
+agentic keys set anthropic       # For Claude models  
+agentic keys set openai          # For GPT models
+
+# Set globally (all projects) vs project-specific
+agentic keys set gemini --global        # Available everywhere
+agentic keys set gemini                 # Only this project
+
+# View configured keys (masked for security)
+agentic keys list
+
+# Remove keys
+agentic keys remove gemini
+```
+
+### **📄 Method 2: .env File**
+
+For developers who prefer environment files:
+
+```bash
+# Create template
+agentic keys env-template
+
+# Copy and edit
+cp .env.example .env
+# Edit .env with your API keys
+```
+
+Example `.env` file:
+```bash
+# Google/Gemini API Key
+GOOGLE_API_KEY=your_actual_api_key_here
+
+# Anthropic API Key  
+ANTHROPIC_API_KEY=your_actual_api_key_here
+
+# OpenAI API Key
+OPENAI_API_KEY=your_actual_api_key_here
+```
+
+### **🌍 Method 3: Environment Variables**
+
+Set environment variables directly:
+
+```bash
+# For current session
+export GOOGLE_API_KEY="your_key_here"
+
+# Permanently (add to your shell profile)
+echo 'export GOOGLE_API_KEY="your_key_here"' >> ~/.bashrc
+```
+
+### **🔄 Fallback Priority**
+
+Agentic automatically finds your API keys in this order:
+1. **Keyring** (project-specific)
+2. **Keyring** (global)  
+3. **.env file** (project directory)
+4. **Environment variables**
+
+### **🧪 Test Your Setup**
+
+```bash
+# Test if your Gemini setup works
+agentic model test gemini
+
+# Check which keys are configured
+agentic keys list
+```
+
+## 🤖 Model Configuration

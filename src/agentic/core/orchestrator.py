@@ -92,10 +92,26 @@ class Orchestrator(LoggerMixin):
             # Create task from intent
             task = Task.from_intent(intent, command)
             
+            # Check if we have any agents, if not spawn one
+            available_agents = self.agent_registry.get_available_agents()
+            if not available_agents:
+                self.logger.info("No agents available, spawning a backend agent for the task...")
+                try:
+                    await self._auto_spawn_agent(intent)
+                except Exception as e:
+                    self.logger.error(f"Failed to auto-spawn agent: {e}")
+                    return TaskResult(
+                        task_id=task.id,
+                        agent_id="none",
+                        status="failed",
+                        output="",
+                        error=f"No agents available and failed to spawn: {e}"
+                    )
+            
             # Route to appropriate agent
             routing_decision = await self.command_router.route_command(command, context or {})
             
-            if not routing_decision.selected_agents:
+            if not routing_decision.primary_agent:
                 return TaskResult(
                     task_id=task.id,
                     agent_id="none",
@@ -105,7 +121,7 @@ class Orchestrator(LoggerMixin):
                 )
             
             # Execute with best agent
-            best_agent = routing_decision.selected_agents[0]
+            best_agent = routing_decision.primary_agent
             agent_instance = self.agent_registry.get_agent_by_id(best_agent.id)
             
             if not agent_instance:
@@ -366,4 +382,43 @@ class Orchestrator(LoggerMixin):
             
         except Exception as e:
             self.logger.error(f"Error during shutdown: {e}")
-            raise 
+            raise
+    
+    async def _auto_spawn_agent(self, intent) -> None:
+        """Automatically spawn an appropriate agent based on task intent"""
+        from agentic.models.agent import AgentConfig, AgentType
+        
+        # Determine best agent type for the task
+        agent_type = AgentType.AIDER_BACKEND  # Default
+        focus_areas = ["general"]
+        
+        if hasattr(intent, 'affected_areas') and intent.affected_areas:
+            if "frontend" in intent.affected_areas:
+                agent_type = AgentType.AIDER_FRONTEND
+                focus_areas = ["frontend", "ui", "components"]
+            elif "testing" in intent.affected_areas:
+                agent_type = AgentType.AIDER_TESTING
+                focus_areas = ["testing", "qa"]
+            elif "backend" in intent.affected_areas:
+                agent_type = AgentType.AIDER_BACKEND
+                focus_areas = ["backend", "api", "database"]
+        
+        # Check if this is a reasoning task
+        if hasattr(intent, 'requires_reasoning') and intent.requires_reasoning:
+            agent_type = AgentType.CLAUDE_CODE
+            focus_areas = ["reasoning", "debugging", "analysis"]
+        
+        # Create agent config using unified model configuration
+        config = AgentConfig(
+            agent_type=agent_type,
+            name=f"auto_{agent_type.value.lower()}",
+            workspace_path=self.config.workspace_path,
+            focus_areas=focus_areas,
+            ai_model_config={"model": self.config.primary_model},
+            max_tokens=self.config.max_tokens,
+            temperature=self.config.temperature
+        )
+        
+        # Spawn the agent
+        session = await self.agent_registry.spawn_agent(config)
+        self.logger.info(f"Auto-spawned {agent_type.value} agent: {session.id}") 

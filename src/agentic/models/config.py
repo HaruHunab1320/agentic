@@ -34,6 +34,12 @@ class AgenticConfig(BaseModel):
     include_tests: bool = Field(default=True, description="Include test files in analysis")
     include_docs: bool = Field(default=True, description="Include documentation in analysis")
     
+    # Model configuration (unified)
+    primary_model: str = Field(default="claude-3-5-sonnet", description="Primary AI model")
+    fallback_model: str = Field(default="claude-3-haiku", description="Fallback AI model")
+    temperature: float = Field(default=0.1, description="Model temperature")
+    max_tokens: int = Field(default=100000, description="Maximum tokens per request")
+    
     # File patterns
     ignore_patterns: List[str] = Field(
         default_factory=lambda: [

@@ -19,9 +19,7 @@ from agentic.core.project_analyzer import ProjectAnalyzer
 from agentic.core.orchestrator import Orchestrator
 from agentic.models.config import AgenticConfig
 from agentic.utils.logging import setup_logging
-from agentic.core.configuration import ConfigurationManager
 from agentic.core.interactive_cli import InteractiveCLI
-from agentic.core.monitoring import PerformanceMonitor, PerformanceReport
 from agentic.core.ide_integration import (
     IDEIntegrationManager,
     initialize_ide_integration,
@@ -372,19 +370,18 @@ def config_show(ctx: click.Context, output_format: str):
             # Core settings
             table.add_row("Workspace", str(config.workspace_path), "config")
             table.add_row("Log Level", config.log_level, "config")
-            table.add_row("Max Agents", str(config.max_agents), "config")
+            table.add_row("Max Agents", str(config.max_concurrent_agents), "config")
             table.add_row("Auto Spawn", str(config.auto_spawn_agents), "config")
             
-            # Model settings
-            table.add_row("Primary Model", config.model_config.primary_model, "config")
-            table.add_row("Fallback Model", config.model_config.fallback_model, "config")
-            table.add_row("Max Tokens", str(config.model_config.max_tokens), "config")
-            table.add_row("Temperature", str(config.model_config.temperature), "config")
+            # Model settings (unified)
+            table.add_row("Primary Model", config.primary_model, "config")
+            table.add_row("Fallback Model", config.fallback_model, "config")
+            table.add_row("Max Tokens", str(config.max_tokens), "config")
+            table.add_row("Temperature", str(config.temperature), "config")
             
             # Agent settings  
-            table.add_row("Agent Types", ", ".join(config.agent_config.enabled_agent_types), "config")
-            table.add_row("Max Task Time", f"{config.agent_config.max_task_duration_minutes}m", "config")
-            table.add_row("Max Retries", str(config.agent_config.max_retries), "config")
+            agent_types = [agent.agent_type.value for agent in config.agents.values()]
+            table.add_row("Agent Types", ", ".join(agent_types), "config")
             
             console.print(table)
             
@@ -520,19 +517,13 @@ def performance(ctx: click.Context, output_format: str):
     logger = ctx.obj['logger']
     
     try:
-        console.print("[blue]📊 Gathering performance metrics...[/blue]")
+        console.print("[yellow]⚠️ Performance monitoring temporarily disabled during refactor[/yellow]")
+        console.print("[dim]This feature will be restored in the next version[/dim]")
         
-        async def get_report():
-            monitor = PerformanceMonitor(Path.cwd())
-            await monitor.initialize()
-            return await monitor.get_performance_report()
-        
-        report = asyncio.run(get_report())
-        
-        if output_format == "json":
-            console.print_json(json.dumps(report.to_dict()))
-        else:
-            _display_performance_table(report)
+        # TODO: Re-implement with unified configuration
+        # monitor = PerformanceMonitor(Path.cwd())
+        # await monitor.initialize()
+        # return await monitor.get_performance_report()
         
     except Exception as e:
         logger.error(f"Performance command failed: {e}")
@@ -540,36 +531,21 @@ def performance(ctx: click.Context, output_format: str):
         raise click.ClickException(str(e))
 
 
-def _display_performance_table(report: PerformanceReport):
-    """Display performance report as table"""
-    # System Metrics
-    metrics_table = Table(title="🖥️ System Metrics")
-    metrics_table.add_column("Metric", style="cyan")
-    metrics_table.add_column("Value", style="green")
+def _display_performance_table(report):
+    """Display performance report as table - temporarily disabled"""
+    # TODO: Re-implement with unified configuration
+    console.print("[yellow]Performance table display temporarily disabled[/yellow]")
     
-    metrics_table.add_row("CPU Usage", f"{report.system_metrics.cpu_percent:.1f}%")
-    metrics_table.add_row("Memory Usage", f"{report.system_metrics.memory_percent:.1f}%")
-    metrics_table.add_row("Disk Usage", f"{report.system_metrics.disk_percent:.1f}%")
-    
-    console.print(metrics_table)
-    
-    # Cost Information
-    cost_table = Table(title="💰 Cost Tracking")
-    cost_table.add_column("Period", style="cyan")
-    cost_table.add_column("Cost", style="green")
-    
-    cost_table.add_row("Current Hour", f"${report.cost_summary.current_hour_cost:.2f}")
-    cost_table.add_row("Today", f"${report.cost_summary.daily_cost:.2f}")
-    cost_table.add_row("This Month", f"${report.cost_summary.monthly_cost:.2f}")
-    
-    console.print(cost_table)
-    
-    # Health Status
-    health_panel = Panel(
-        f"System Health: [{'green' if report.health_status.overall_health == 'healthy' else 'red'}]{report.health_status.overall_health.upper()}[/]",
-        title="🏥 Health Status"
-    )
-    console.print(health_panel)
+    # # System Metrics
+    # metrics_table = Table(title="🖥️ System Metrics")
+    # metrics_table.add_column("Metric", style="cyan")
+    # metrics_table.add_column("Value", style="green")
+    # 
+    # metrics_table.add_row("CPU Usage", f"{report.system_metrics.cpu_percent:.1f}%")
+    # metrics_table.add_row("Memory Usage", f"{report.system_metrics.memory_percent:.1f}%")
+    # metrics_table.add_row("Disk Usage", f"{report.system_metrics.disk_percent:.1f}%")
+    # 
+    # console.print(metrics_table)
 
 
 @cli.command()
@@ -581,18 +557,14 @@ def debug(ctx: click.Context, agent_name: Optional[str]):
     logger = ctx.obj['logger']
     
     try:
-        console.print("[blue]🐛 Starting debug session...[/blue]")
-        if agent_name:
-            console.print(f"[dim]Focusing on agent: {agent_name}[/dim]")
+        console.print("[yellow]⚠️ Debug console temporarily disabled during refactor[/yellow]")
+        console.print("[dim]This feature will be restored in the next version[/dim]")
         
-        async def start_debug():
-            monitor = PerformanceMonitor(Path.cwd())
-            await monitor.initialize()
-            
-            debug_console = monitor.debug_console
-            await debug_console.start_debug_session(agent_name)
-        
-        asyncio.run(start_debug())
+        # TODO: Re-implement with unified configuration
+        # monitor = PerformanceMonitor(Path.cwd())
+        # await monitor.initialize()
+        # debug_console = monitor.debug_console
+        # await debug_console.start_debug_session(agent_name)
         
     except Exception as e:
         logger.error(f"Debug command failed: {e}")
@@ -879,6 +851,384 @@ async def _stop_agents(agent_name: Optional[str], debug: bool) -> None:
         console.print("[yellow]🛑 Stopping all agents...[/yellow]")
         # TODO: Implement stopping all agents
         console.print("[dim]No active agents to stop[/dim]")
+
+
+@cli.group()
+def model():
+    """Configure AI models for agents"""
+    pass
+
+
+@model.command('list')
+@click.option('--workspace', '-w', type=click.Path(path_type=Path),
+              default=Path.cwd(), help='Workspace directory')
+def model_list(workspace: Path):
+    """List available models and current configuration"""
+    try:
+        # Use the existing AgenticConfig from models/config.py
+        from agentic.models.config import AgenticConfig as WorkspaceConfig
+        
+        # Try to load existing config, create default if not found
+        try:
+            config = WorkspaceConfig.load_or_create(workspace)
+        except Exception:
+            # If loading fails, create a basic default
+            config = WorkspaceConfig.create_default(workspace)
+        
+        console.print("[bold blue]🤖 Available Models[/bold blue]\n")
+        
+        # Display supported models by provider
+        models_info = {
+            "Gemini (Google)": [
+                "gemini/gemini-1.5-pro-latest",
+                "gemini/gemini-1.5-flash-latest", 
+                "gemini-1.5-pro (alias)",
+                "gemini-1.5-flash (alias)",
+                "gemini (default alias)",
+            ],
+            "Claude (Anthropic)": [
+                "claude-3-5-sonnet",
+                "claude-3-haiku", 
+                "claude-3-opus",
+                "claude (alias)",
+                "sonnet (alias)",
+                "haiku (alias)",
+            ],
+            "OpenAI": [
+                "gpt-4o",
+                "gpt-4-0125-preview",
+                "gpt-3.5-turbo",
+                "gpt-4 (alias)",
+                "gpt-3.5 (alias)",
+            ]
+        }
+        
+        for provider, models in models_info.items():
+            console.print(f"[green]{provider}:[/green]")
+            for model in models:
+                console.print(f"  • {model}")
+            console.print()
+        
+        # Display current configuration
+        console.print("[bold blue]📋 Current Configuration[/bold blue]\n")
+        
+        # Show global model settings
+        console.print(f"Global Primary Model: [yellow]{config.primary_model}[/yellow]")
+        console.print(f"Global Fallback Model: [yellow]{config.fallback_model}[/yellow]")
+        console.print()
+        
+        # Show agent-specific models
+        agent_models = []
+        for agent_name, agent_config in config.agents.items():
+            if hasattr(agent_config, 'ai_model_config') and agent_config.ai_model_config:
+                model = agent_config.ai_model_config.get('model', 'default')
+                agent_models.append(f"{agent_name}: [yellow]{model}[/yellow]")
+        
+        if agent_models:
+            console.print("Agent-Specific Models:")
+            for agent_model in agent_models:
+                console.print(f"  • {agent_model}")
+        else:
+            console.print("No agent-specific models configured")
+        
+        console.print(f"\nWorkspace: [cyan]{config.workspace_path}[/cyan]")
+        
+    except Exception as e:
+        console.print(f"[red]❌ Error listing models: {e}[/red]")
+        sys.exit(1)
+
+
+@model.command('set')
+@click.argument('model_name')
+@click.option('--agent', '-a', help='Set model for specific agent (default: all agents)')
+@click.option('--workspace', '-w', type=click.Path(path_type=Path),
+              default=Path.cwd(), help='Workspace directory')
+def model_set(model_name: str, agent: Optional[str], workspace: Path):
+    """Set the AI model for agents"""
+    try:
+        # Use the existing AgenticConfig from models/config.py
+        from agentic.models.config import AgenticConfig as WorkspaceConfig
+        from agentic.models.agent import AgentConfig, AgentType
+        
+        # Load or create config
+        config = WorkspaceConfig.load_or_create(workspace)
+        
+        if agent:
+            # Set model for specific agent
+            if agent in config.agents:
+                # Update existing agent
+                agent_config = config.agents[agent]
+                if not hasattr(agent_config, 'ai_model_config'):
+                    agent_config.ai_model_config = {}
+                agent_config.ai_model_config['model'] = model_name
+            else:
+                # Create new agent config
+                agent_config = AgentConfig(
+                    agent_type=AgentType.AIDER_BACKEND,  # Default type
+                    name=agent,
+                    workspace_path=workspace,
+                    focus_areas=["general"],
+                    ai_model_config={"model": model_name},
+                    max_tokens=100000,
+                    temperature=0.1
+                )
+                config.add_agent_config(agent, agent_config)
+                
+            console.print(f"[green]✅ Set model '[yellow]{model_name}[/yellow]' for agent '[cyan]{agent}[/cyan]'[/green]")
+        else:
+            # Set model for all existing agents AND update global default
+            config.primary_model = model_name  # Update global setting
+            
+            updated_agents = []
+            for agent_name, agent_config in config.agents.items():
+                if not hasattr(agent_config, 'ai_model_config'):
+                    agent_config.ai_model_config = {}
+                agent_config.ai_model_config['model'] = model_name
+                updated_agents.append(agent_name)
+            
+            if updated_agents:
+                console.print(f"[green]✅ Set model '[yellow]{model_name}[/yellow]' globally and for agents: [cyan]{', '.join(updated_agents)}[/cyan][/green]")
+            else:
+                console.print(f"[green]✅ Set global default model to '[yellow]{model_name}[/yellow]'[/green]")
+                console.print(f"[yellow]💡 Use --agent to create a new agent with this model.[/yellow]")
+        
+        # Save the configuration
+        config_file = workspace / '.agentic' / 'config.yml'
+        config_file.parent.mkdir(parents=True, exist_ok=True)
+        config.save_to_yaml(config_file)
+        
+        # Show usage tip
+        console.print(f"\n[dim]💡 Use 'agentic model list' to see all available models[/dim]")
+        
+    except Exception as e:
+        console.print(f"[red]❌ Error setting model: {e}[/red]")
+        sys.exit(1)
+
+
+@model.command('test')
+@click.argument('model_name')
+@click.option('--workspace', '-w', type=click.Path(path_type=Path),
+              default=Path.cwd(), help='Workspace directory')
+def model_test(model_name: str, workspace: Path):
+    """Test a model configuration with Aider"""
+    try:
+        console.print(f"[blue]🧪 Testing model '[yellow]{model_name}[/yellow]'...[/blue]")
+        
+        async def test_model():
+            # Import here to avoid circular imports
+            from agentic.agents.aider_agents import BaseAiderAgent
+            from agentic.models.agent import AgentConfig, AgentType
+            
+            # Create test agent config with the specified model
+            test_config = AgentConfig(
+                agent_type=AgentType.AIDER_BACKEND,
+                name="test_agent",
+                workspace_path=workspace,
+                focus_areas=["testing"],
+                ai_model_config={"model": model_name},
+                max_tokens=1000,
+                temperature=0.1
+            )
+            
+            # Create test agent
+            agent = BaseAiderAgent(test_config)
+            
+            # Test model mapping
+            mapped_model = agent._get_model_for_aider()
+            console.print(f"Model mapping: [yellow]{model_name}[/yellow] → [green]{mapped_model}[/green]")
+            
+            # Test Aider command construction
+            agent._setup_aider_args()
+            test_command = agent.aider_args + ["--help"]
+            
+            console.print(f"Test command: [dim]{' '.join(test_command)}[/dim]")
+            
+            # Run actual test
+            import subprocess
+            result = subprocess.run(test_command, capture_output=True, text=True, timeout=10)
+            
+            if result.returncode == 0:
+                console.print(f"[green]✅ Model '[yellow]{model_name}[/yellow]' is working correctly![/green]")
+                return True
+            else:
+                console.print(f"[red]❌ Model test failed: {result.stderr}[/red]")
+                return False
+        
+        success = asyncio.run(test_model())
+        if not success:
+            sys.exit(1)
+            
+    except Exception as e:
+        console.print(f"[red]❌ Error testing model: {e}[/red]")
+        sys.exit(1)
+
+
+@cli.group()
+def keys():
+    """Manage API keys securely"""
+    pass
+
+
+@keys.command('set')
+@click.argument('provider', type=click.Choice(['anthropic', 'openai', 'google', 'gemini']))
+@click.option('--key', '-k', help='API key (will prompt securely if not provided)')
+@click.option('--workspace', '-w', type=click.Path(path_type=Path),
+              default=Path.cwd(), help='Workspace directory (for project-specific keys)')
+@click.option('--global', 'is_global', is_flag=True, help='Set key globally (default: project-specific)')
+def keys_set(provider: str, key: Optional[str], workspace: Path, is_global: bool):
+    """Set API key for a provider"""
+    try:
+        # Import keyring for secure storage
+        import keyring
+        
+        # If key not provided, prompt securely
+        if not key:
+            key = click.prompt(f'Enter {provider.upper()} API key', hide_input=True)
+        
+        # Determine storage scope
+        if is_global:
+            service_name = f"agentic.{provider}"
+            username = "global"
+            scope_desc = "globally"
+        else:
+            service_name = f"agentic.{provider}.{workspace.name}"
+            username = str(workspace)
+            scope_desc = f"for project '{workspace.name}'"
+        
+        # Store in keyring
+        keyring.set_password(service_name, username, key)
+        
+        console.print(f"[green]✅ {provider.upper()} API key set {scope_desc}[/green]")
+        
+        # Show usage instructions
+        if provider == 'gemini':
+            console.print(f"[dim]💡 Now you can use: agentic model set gemini[/dim]")
+        elif provider == 'anthropic':
+            console.print(f"[dim]💡 Now you can use: agentic model set claude-3-5-sonnet[/dim]")
+        elif provider == 'openai':
+            console.print(f"[dim]💡 Now you can use: agentic model set gpt-4o[/dim]")
+            
+    except ImportError:
+        console.print("[red]❌ keyring library not found. Install with: pip install keyring[/red]")
+        console.print("[dim]Alternative: Set environment variable {provider.upper()}_API_KEY[/dim]")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]❌ Failed to set API key: {e}[/red]")
+        sys.exit(1)
+
+
+@keys.command('get')
+@click.argument('provider', type=click.Choice(['anthropic', 'openai', 'google', 'gemini']))
+@click.option('--workspace', '-w', type=click.Path(path_type=Path),
+              default=Path.cwd(), help='Workspace directory')
+@click.option('--show', is_flag=True, help='Show the actual key (default: show masked)')
+def keys_get(provider: str, workspace: Path, show: bool):
+    """Get API key for a provider"""
+    try:
+        from agentic.utils.credentials import get_api_key
+        
+        key = get_api_key(provider, workspace)
+        
+        if key:
+            if show:
+                console.print(f"{provider.upper()}: {key}")
+            else:
+                masked_key = key[:8] + "..." + key[-4:] if len(key) > 12 else "***"
+                console.print(f"{provider.upper()}: {masked_key}")
+        else:
+            console.print(f"[yellow]⚠️ No {provider.upper()} API key found[/yellow]")
+            console.print(f"[dim]Set with: agentic keys set {provider}[/dim]")
+            
+    except Exception as e:
+        console.print(f"[red]❌ Failed to get API key: {e}[/red]")
+        sys.exit(1)
+
+
+@keys.command('list')
+@click.option('--workspace', '-w', type=click.Path(path_type=Path),
+              default=Path.cwd(), help='Workspace directory')
+def keys_list(workspace: Path):
+    """List all configured API keys"""
+    try:
+        from agentic.utils.credentials import list_api_keys
+        
+        keys_info = list_api_keys(workspace)
+        
+        if not keys_info:
+            console.print("[yellow]⚠️ No API keys configured[/yellow]")
+            console.print("[dim]Set keys with: agentic keys set <provider>[/dim]")
+            return
+        
+        table = Table(title="🔐 Configured API Keys")
+        table.add_column("Provider", style="cyan")
+        table.add_column("Scope", style="yellow")
+        table.add_column("Key", style="green")
+        table.add_column("Source", style="dim")
+        
+        for provider, info in keys_info.items():
+            masked_key = info['key'][:8] + "..." + info['key'][-4:] if len(info['key']) > 12 else "***"
+            table.add_row(provider.upper(), info['scope'], masked_key, info['source'])
+        
+        console.print(table)
+        
+    except Exception as e:
+        console.print(f"[red]❌ Failed to list API keys: {e}[/red]")
+        sys.exit(1)
+
+
+@keys.command('remove')
+@click.argument('provider', type=click.Choice(['anthropic', 'openai', 'google', 'gemini']))
+@click.option('--workspace', '-w', type=click.Path(path_type=Path),
+              default=Path.cwd(), help='Workspace directory')
+@click.option('--global', 'is_global', is_flag=True, help='Remove global key')
+@click.confirmation_option(prompt='Are you sure you want to remove this API key?')
+def keys_remove(provider: str, workspace: Path, is_global: bool):
+    """Remove API key for a provider"""
+    try:
+        import keyring
+        
+        if is_global:
+            service_name = f"agentic.{provider}"
+            username = "global"
+            scope_desc = "global"
+        else:
+            service_name = f"agentic.{provider}.{workspace.name}"
+            username = str(workspace)
+            scope_desc = f"project '{workspace.name}'"
+        
+        try:
+            keyring.delete_password(service_name, username)
+            console.print(f"[green]✅ Removed {provider.upper()} API key from {scope_desc}[/green]")
+        except keyring.errors.PasswordDeleteError:
+            console.print(f"[yellow]⚠️ No {provider.upper()} API key found in {scope_desc}[/yellow]")
+            
+    except ImportError:
+        console.print("[red]❌ keyring library not found[/red]")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]❌ Failed to remove API key: {e}[/red]")
+        sys.exit(1)
+
+
+@keys.command('env-template')
+@click.option('--workspace', '-w', type=click.Path(path_type=Path),
+              default=Path.cwd(), help='Workspace directory')
+def keys_env_template(workspace: Path):
+    """Create .env.example template for API keys"""
+    try:
+        from agentic.utils.credentials import create_env_template
+        
+        create_env_template(workspace)
+        
+        console.print(f"[green]✅ Created .env.example template in {workspace}[/green]")
+        console.print("[dim]Next steps:[/dim]")
+        console.print("[dim]  1. Copy .env.example to .env[/dim]")
+        console.print("[dim]  2. Add your actual API keys to .env[/dim]")
+        console.print("[dim]  3. The .env file is already added to .gitignore[/dim]")
+        
+    except Exception as e:
+        console.print(f"[red]❌ Failed to create template: {e}[/red]")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
