@@ -1,0 +1,43 @@
+<idea-plugin>
+            <id>com.agentic.plugin</id>
+            <name>Agentic AI Assistant</name>
+            <version>1.0</version>
+            <vendor email="support@agentic.dev" url="https://agentic.dev">Agentic</vendor>
+            
+            <description><![CDATA[
+                Multi-agent AI development assistant for intellij
+            ]]></description>
+            
+            <idea-version since-build="173.0"/>
+            
+            <depends>com.intellij.modules.platform</depends>
+            <depends>com.intellij.modules.lang</depends>
+            
+            <extensions defaultExtensionNs="com.intellij">
+                <toolWindow id="Agentic" secondary="true" anchor="right" 
+                           factoryClass="com.agentic.plugin.AgenticToolWindowFactory"/>
+                
+                <applicationService serviceImplementation="com.agentic.plugin.AgenticService"/>
+                
+                <projectService serviceImplementation="com.agentic.plugin.AgenticProjectService"/>
+            </extensions>
+            
+            <actions>
+                <group id="AgenticActionGroup" text="Agentic" description="Agentic AI Assistant">
+                    <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+                    <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
+                    
+                    <action id="Agentic.ExplainCode" class="com.agentic.plugin.ExplainCodeAction"
+                           text="Explain Code" description="Explain selected code with AI"/>
+                    
+                    <action id="Agentic.RefactorCode" class="com.agentic.plugin.RefactorCodeAction"
+                           text="Refactor Code" description="Refactor selected code with AI"/>
+                    
+                    <action id="Agentic.GenerateTests" class="com.agentic.plugin.GenerateTestsAction"
+                           text="Generate Tests" description="Generate tests for selected code"/>
+                    
+                    <action id="Agentic.ExecuteCommand" class="com.agentic.plugin.ExecuteCommandAction"
+                           text="Execute Agentic Command" description="Execute custom Agentic command"/>
+                </group>
+            </actions>
+        </idea-plugin>

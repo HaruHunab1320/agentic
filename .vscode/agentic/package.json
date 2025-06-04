@@ -1,0 +1,113 @@
+{
+  "name": "agentic-vscode",
+  "displayName": "Agentic AI Assistant",
+  "description": "Multi-agent AI development assistant",
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "agentic.init",
+        "title": "Initialize Agentic",
+        "category": "Agentic"
+      },
+      {
+        "command": "agentic.executeCommand",
+        "title": "Execute Command",
+        "category": "Agentic"
+      },
+      {
+        "command": "agentic.showPanel",
+        "title": "Show Agentic Panel",
+        "category": "Agentic"
+      },
+      {
+        "command": "agentic.explainCode",
+        "title": "Explain Selected Code",
+        "category": "Agentic"
+      },
+      {
+        "command": "agentic.refactorCode",
+        "title": "Refactor Selected Code",
+        "category": "Agentic"
+      },
+      {
+        "command": "agentic.generateTests",
+        "title": "Generate Tests",
+        "category": "Agentic"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "agentic.explainCode",
+          "when": "editorHasSelection",
+          "group": "agentic"
+        },
+        {
+          "command": "agentic.refactorCode",
+          "when": "editorHasSelection",
+          "group": "agentic"
+        },
+        {
+          "command": "agentic.generateTests",
+          "group": "agentic"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "agentic.generateTests",
+          "when": "resourceExtname == .js || resourceExtname == .ts || resourceExtname == .py",
+          "group": "agentic"
+        }
+      ]
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "agenticAgents",
+          "name": "Agentic Agents",
+          "when": "agenticExtensionActive"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "agentic",
+          "title": "Agentic",
+          "icon": "$(robot)"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Agentic",
+      "properties": {
+        "agentic.autoInitialize": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically initialize Agentic when opening a project"
+        },
+        "agentic.primaryModel": {
+          "type": "string",
+          "default": "claude-3-5-sonnet",
+          "description": "Primary AI model to use"
+        },
+        "agentic.maxCostPerHour": {
+          "type": "number",
+          "default": 10.0,
+          "description": "Maximum cost per hour in USD"
+        }
+      }
+    }
+  }
+}
