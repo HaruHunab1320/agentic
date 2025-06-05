@@ -45,6 +45,9 @@ exclude_patterns = []
 
 html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
+html_css_files = [
+    'custom.css',
+]
 
 # -- Extension configuration -------------------------------------------------
 
@@ -79,8 +82,8 @@ autosummary_generate = True
 # Intersphinx configuration
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
-    'pydantic': ('https://docs.pydantic.dev/', None),
-    'click': ('https://click.palletsprojects.com/', None),
+    'pydantic': ('https://docs.pydantic.dev/latest/', None),
+    'click': ('https://click.palletsprojects.com/en/stable/', None),
     'rich': ('https://rich.readthedocs.io/en/stable/', None),
 }
 

@@ -3,7 +3,7 @@
   base = "docs/"
   
   # Directory that contains the deploy-ready HTML files
-  publish = "docs/build/html/"
+  publish = "build/html/"
   
   # Command to build the site
   command = "make html"

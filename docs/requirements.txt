@@ -1,4 +1,10 @@
 sphinx>=4.0.0
 sphinx-rtd-theme>=1.0.0
 sphinx-autodoc-typehints>=1.12.0
-myst-parser>=0.18.0 
+myst-parser>=0.18.0
+linkify-it-py>=2.0.0
+pydantic>=2.0.0
+rich>=13.0.0
+click>=8.0.0
+aiohttp>=3.8.0
+python-dotenv>=1.0.0 

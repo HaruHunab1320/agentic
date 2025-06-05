@@ -1,0 +1,25 @@
+/* Custom styles for Agentic documentation */
+
+.rst-content .note .note-title,
+.rst-content .tip .tip-title,
+.rst-content .important .important-title,
+.rst-content .warning .warning-title {
+    font-weight: bold;
+}
+
+/* Improve code block styling */
+.rst-content pre.literal-block {
+    background-color: #f8f8f8;
+    border: 1px solid #e1e4e5;
+}
+
+/* Better table styling */
+.rst-content table.docutils {
+    border-collapse: collapse;
+}
+
+.rst-content table.docutils th,
+.rst-content table.docutils td {
+    border: 1px solid #e1e4e5;
+    padding: 8px;
+} 
