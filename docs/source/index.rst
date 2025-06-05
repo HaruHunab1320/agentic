@@ -144,23 +144,23 @@ Agentic uses a layered architecture designed for scalability and reliability:
 Agent Ecosystem
 ---------------
 
-**Python Expert Agent**
-   Specializes in Python development with deep knowledge of frameworks like FastAPI, Django, and modern Python best practices.
+**Claude Code Agent**
+   Fast analysis and reasoning agent for debugging, code review, and quick explanations. Optimized for single-file tasks and creative problem solving.
 
-**Security Specialist Agent**
-   Focuses on security analysis, vulnerability scanning, and implementing security best practices across the codebase.
+**Aider Frontend Agent**
+   Handles all frontend development including React, Vue.js, TypeScript, CSS, and modern frontend tooling with focus on user experience and performance.
 
-**Frontend Developer Agent**
-   Handles React, Vue.js, and modern frontend development with focus on user experience and performance.
+**Aider Backend Agent**
+   Manages server-side development including APIs, databases, authentication, and business logic across multiple languages (Python, Node.js, Go, Rust, Java).
 
-**Quality Assurance Agent**
-   Ensures code quality through testing, coverage analysis, type checking, and comprehensive quality metrics.
+**Aider Testing Agent**
+   Ensures code quality through comprehensive testing, coverage analysis, test automation, and quality assurance across all frameworks.
 
-**DevOps Engineer Agent**
-   Manages deployment, CI/CD, containerization, and infrastructure automation tasks.
+**Aider DevOps Agent**
+   Manages deployment, CI/CD, containerization, and infrastructure automation tasks with Docker, Kubernetes, and cloud platforms.
 
-**Custom Domain Agents**
-   Extensible plugin system allows creation of specialized agents for specific domains like data science, machine learning, or industry-specific requirements.
+**Multi-Language Support**
+   All agents support multiple programming languages and automatically detect project technology stacks for optimal tooling selection.
 
 Enterprise Features
 -------------------

@@ -201,66 +201,67 @@ Analyzes project structure and provides insights:
 Agent Specializations
 --------------------
 
-Python Expert Agent
+Claude Code Agent
+~~~~~~~~~~~~~~~~~
+
+Fast analysis and reasoning agent optimized for debugging and quick insights:
+
+.. code-block:: python
+
+   class ClaudeCodeAgent(Agent):
+       specializations = [
+           "analysis", "debugging", "code_review", 
+           "optimization", "explanation", "documentation"
+       ]
+       supported_languages = [
+           "python", "javascript", "typescript", "rust", "go",
+           "java", "cpp", "c", "html", "css", "sql", "bash"
+       ]
+       
+       async def execute_task(self, task: Task) -> TaskResult:
+           # Execute with Claude Code CLI for fast results
+           return await self._execute_with_claude_code(task)
+
+Aider Frontend Agent
 ~~~~~~~~~~~~~~~~~~~
 
-Specialized for Python development tasks:
+Specialized for frontend development across multiple frameworks:
 
 .. code-block:: python
 
-   class PythonExpertAgent(BaseAgent):
-       capabilities = [
-           "code-generation",
-           "refactoring",
-           "type-hinting",
-           "testing",
-           "documentation"
+   class AiderFrontendAgent(BaseAiderAgent):
+       focus_areas = ["frontend", "components", "ui", "styling"]
+       supported_frameworks = [
+           "react", "vue", "angular", "svelte", "nextjs"
        ]
        
-       async def process_request(self, request: AgentRequest) -> AgentResponse:
-           if "type hints" in request.content.lower():
-               return await self._add_type_hints(request)
-           elif "refactor" in request.content.lower():
-               return await self._refactor_code(request)
-           elif "test" in request.content.lower():
-               return await self._generate_tests(request)
-           else:
-               return await self._general_code_generation(request)
+       def _build_specialized_message(self, task: Task) -> str:
+           return f"""Focus on frontend development including:
+           - UI/UX design and implementation
+           - Component architecture and reusability  
+           - Modern frontend frameworks (React, Vue, Angular)
+           - CSS/styling and responsive design
+           - Frontend build tools and optimization"""
 
-Security Specialist Agent
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Aider Backend Agent
+~~~~~~~~~~~~~~~~~~
 
-Focused on security analysis and remediation:
+Handles server-side development across multiple languages:
 
 .. code-block:: python
 
-   class SecuritySpecialistAgent(BaseAgent):
-       capabilities = [
-           "vulnerability-scanning",
-           "security-review",
-           "compliance-checking",
-           "penetration-testing"
+   class AiderBackendAgent(BaseAiderAgent):
+       focus_areas = ["backend", "api", "database", "server"]
+       supported_languages = [
+           "python", "javascript", "typescript", "go", "rust", "java"
        ]
        
-       async def process_request(self, request: AgentRequest) -> AgentResponse:
-           # Perform security analysis
-           vulnerabilities = await self._scan_vulnerabilities(request.files)
-           
-           # Generate security report
-           report = await self._generate_security_report(vulnerabilities)
-           
-           # Suggest fixes
-           fixes = await self._suggest_security_fixes(vulnerabilities)
-           
-           return AgentResponse(
-               success=True,
-               content=report,
-               metadata={
-                   "vulnerabilities": vulnerabilities,
-                   "fixes": fixes,
-                   "risk_score": self._calculate_risk_score(vulnerabilities)
-               }
-           )
+       def _build_specialized_message(self, task: Task) -> str:
+           return f"""Focus on backend development including:
+           - API design and implementation (REST, GraphQL)
+           - Database design, queries, and migrations
+           - Authentication and authorization
+           - Server configuration and middleware"""
 
 Communication Patterns
 ----------------------

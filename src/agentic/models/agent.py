@@ -18,11 +18,23 @@ from agentic.models.task import Task, TaskResult
 
 class AgentType(str, Enum):
     """Types of available agents"""
+    # Analysis and reasoning
     CLAUDE_CODE = "claude_code"
+    
+    # Domain-based agents (current implementation)
     AIDER_BACKEND = "aider_backend"
     AIDER_FRONTEND = "aider_frontend"
     AIDER_TESTING = "aider_testing"
     AIDER_DEVOPS = "aider_devops"
+    
+    # Granular specialist agents (enterprise vision)
+    PYTHON_EXPERT = "python_expert"
+    SECURITY_SPECIALIST = "security_specialist"
+    FRONTEND_DEVELOPER = "frontend_developer"
+    QUALITY_ASSURANCE = "quality_assurance"
+    DEVOPS_ENGINEER = "devops_engineer"
+    
+    # Extensibility
     CUSTOM = "custom"
 
 
