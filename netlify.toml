@@ -1,0 +1,33 @@
+[build]
+  # Directory to change to before starting a build
+  base = "docs/"
+  
+  # Directory that contains the deploy-ready HTML files
+  publish = "docs/build/html/"
+  
+  # Command to build the site
+  command = "make html"
+
+[build.environment]
+  # Python version for Sphinx
+  PYTHON_VERSION = "3.9"
+
+# Redirect rules for cleaner URLs
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 404
+
+# Headers for better performance
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+
+# Optimize static assets
+[[headers]]
+  for = "/_static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable" 
