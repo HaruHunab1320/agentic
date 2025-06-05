@@ -1215,6 +1215,111 @@ def comm_status(ctx: click.Context):
         raise click.ClickException(str(e))
 
 
+@cli.command("exec-multi")
+@click.argument("command", nargs=-1, required=True)
+@click.option("--context", help="Additional context for the command")
+@click.option("--agent-type", "-t", 
+              type=click.Choice(["claude", "aider", "dynamic", "mixed"]), 
+              default="dynamic", 
+              help="Agent type strategy: claude (all Claude Code), aider (all Aider), dynamic (intelligent mix), mixed (force both types)")
+@click.option("--track-metrics", "-m", is_flag=True, 
+              help="Track performance metrics for agent comparison")
+@click.pass_context
+def exec_multi(ctx: click.Context, command: tuple, context: str, agent_type: str, track_metrics: bool):
+    """Execute a command using multiple coordinated agents (Claude Code + Aider agents)"""
+    
+    logger = ctx.obj['logger']
+    
+    # Combine command parts into single string
+    command_str = " ".join(command)
+    
+    console.print(f"[bold blue]🤖🤖🤖 Multi-Agent Execution: {command_str}[/bold blue]")
+    console.print("[dim]This mode spawns multiple specialized agents working together[/dim]")
+    if context:
+        console.print(f"[dim]Context: {context}[/dim]")
+    
+    try:
+        # Load configuration
+        config = AgenticConfig.load_or_create(Path.cwd())
+        
+        # Initialize orchestrator
+        orchestrator = Orchestrator(config)
+        
+        async def async_exec_multi():
+            # Initialize orchestrator if needed
+            if not orchestrator.is_ready:
+                console.print("[yellow]⚠️ Orchestrator not initialized. Initializing now...[/yellow]")
+                success = await orchestrator.initialize()
+                if not success:
+                    console.print("[red]❌ Failed to initialize orchestrator[/red]")
+                    return
+            
+            # Execute multi-agent command
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+                transient=True
+            ) as progress:
+                task = progress.add_task("Analyzing and decomposing command...", total=None)
+                
+                try:
+                    execution_context = {
+                        "context": context,
+                        "agent_type_strategy": agent_type,
+                        "track_metrics": track_metrics
+                    } if context or agent_type != "dynamic" or track_metrics else None
+                    
+                    result = await orchestrator.execute_multi_agent_command(
+                        command=command_str,
+                        context=execution_context
+                    )
+                    progress.remove_task(task)
+                    
+                    if result and result.status == "completed":
+                        console.print("[bold green]✅ Multi-agent command completed successfully![/bold green]")
+                        
+                        # Display summary
+                        console.print(f"\n[bold]Execution Summary:[/bold]")
+                        console.print(f"  • Total tasks: {len(result.completed_tasks) + len(result.failed_tasks)}")
+                        console.print(f"  • Completed: {len(result.completed_tasks)}")
+                        console.print(f"  • Failed: {len(result.failed_tasks)}")
+                        console.print(f"  • Duration: {result.total_duration:.1f}s")
+                        
+                        # Show coordination log highlights
+                        if result.coordination_log:
+                            console.print(f"\n[bold]Coordination Highlights:[/bold]")
+                            for log_entry in result.coordination_log[-3:]:  # Show last 3 entries
+                                entry_type = log_entry.get("type", "unknown")
+                                if entry_type == "parallel_execution_start":
+                                    console.print(f"  • Started {log_entry.get('task_count', 0)} agents in parallel")
+                                elif entry_type == "execution_complete":
+                                    console.print(f"  • Execution completed with status: {log_entry.get('status', 'unknown')}")
+                        
+                        # Show failed tasks if any
+                        if result.failed_tasks:
+                            console.print(f"\n[yellow]⚠️ Failed tasks: {', '.join(result.failed_tasks)}[/yellow]")
+                            
+                    else:
+                        status = result.status if result else "unknown"
+                        console.print(f"[bold red]❌ Multi-agent command failed with status: {status}[/bold red]")
+                        
+                        if result and result.failed_tasks:
+                            console.print(f"Failed tasks: {', '.join(result.failed_tasks)}")
+                            
+                except Exception as e:
+                    progress.remove_task(task)
+                    logger.error(f"Multi-agent command execution failed: {e}")
+                    console.print(f"[bold red]❌ Execution failed: {e}[/bold red]")
+        
+        asyncio.run(async_exec_multi())
+        
+    except Exception as e:
+        logger.error(f"Multi-agent exec command failed: {e}")
+        console.print(f"[bold red]❌ Error: {e}[/bold red]")
+        raise click.ClickException(str(e))
+
+
 @cli.group()
 def model():
     """Configure AI models for agents"""

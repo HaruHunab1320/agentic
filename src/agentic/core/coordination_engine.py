@@ -269,22 +269,64 @@ class CoordinationEngine(LoggerMixin):
         return task_results
     
     async def _find_best_agent_for_task(self, task: Task) -> Optional[AgentSession]:
-        """Find the best available agent for a task"""
+        """Find the best available agent for a task, spawning one if needed"""
         # Get available agents
         available_agents = self.agent_registry.get_available_agents()
-        if not available_agents:
-            return None
         
         # Use command router logic for agent selection
         # For now, simple assignment based on task areas
-        for area in task.affected_areas:
-            area_agents = [a for a in available_agents if area in a.agent_config.focus_areas]
-            if area_agents:
-                # Return least busy agent
-                return min(area_agents, key=lambda a: len(getattr(a, 'current_tasks', [])))
+        if available_agents:
+            for area in task.affected_areas:
+                area_agents = [a for a in available_agents if area in a.agent_config.focus_areas]
+                if area_agents:
+                    # Return least busy agent
+                    return min(area_agents, key=lambda a: len(getattr(a, 'current_tasks', [])))
+            
+            # Fallback to any available agent
+            return available_agents[0]
         
-        # Fallback to any available agent
-        return available_agents[0]
+        # No agents available, try to spawn one based on task hint or areas
+        try:
+            from agentic.models.agent import AgentConfig, AgentType
+            
+            # Use agent_type_hint if available
+            if hasattr(task, 'agent_type_hint') and task.agent_type_hint:
+                if task.agent_type_hint == 'claude_code':
+                    agent_type = AgentType.CLAUDE_CODE
+                elif task.agent_type_hint == 'aider_frontend':
+                    agent_type = AgentType.AIDER_FRONTEND
+                elif task.agent_type_hint == 'aider_testing':
+                    agent_type = AgentType.AIDER_TESTING
+                else:
+                    agent_type = AgentType.AIDER_BACKEND
+            else:
+                # Fall back to area-based detection
+                if any(keyword in task.affected_areas for keyword in ['frontend', 'ui', 'components']):
+                    agent_type = AgentType.AIDER_FRONTEND
+                elif any(keyword in task.affected_areas for keyword in ['testing', 'qa']):
+                    agent_type = AgentType.AIDER_TESTING
+                elif any(keyword in task.affected_areas for keyword in ['analysis', 'architecture', 'design']):
+                    agent_type = AgentType.CLAUDE_CODE
+                else:
+                    agent_type = AgentType.AIDER_BACKEND
+            
+            # Create agent config
+            config = AgentConfig(
+                agent_type=agent_type,
+                name=f"multi_{agent_type.value.lower()}",
+                workspace_path=self.agent_registry.workspace_path,
+                focus_areas=task.affected_areas if task.affected_areas else ["general"],
+                ai_model_config={"model": "gemini-2.0-flash-exp"}  # Use available model
+            )
+            
+            # Spawn agent
+            session = await self.agent_registry.get_or_spawn_agent(config)
+            self.logger.info(f"Spawned {agent_type.value} agent for task: {task.id}")
+            return session
+            
+        except Exception as e:
+            self.logger.error(f"Failed to spawn agent for task {task.id}: {e}")
+            return None
     
     async def _detect_conflicts(self, tasks: List[Task]) -> List[ConflictDetection]:
         """Detect potential conflicts between tasks"""
@@ -618,4 +660,213 @@ class CoordinationEngine(LoggerMixin):
                 bg_task.cancel()
                 self.logger.info(f"Cancelled background task {task_id}")
                 return True
-        return False 
+        return False
+    
+    async def execute_multi_agent_command(self, command: str, context: Optional[Dict[str, Any]] = None) -> ExecutionResult:
+        """Decompose a single complex command into multiple parallel agent tasks"""
+        try:
+            self.logger.info(f"Decomposing multi-agent command: {command[:50]}...")
+            
+            # Analyze the command to determine what agents are needed
+            agent_tasks = await self._decompose_command_into_agent_tasks(command, context or {})
+            
+            if len(agent_tasks) <= 1:
+                self.logger.info("Command doesn't require multi-agent coordination, using single agent")
+                # Fall back to single agent execution
+                return await self._execute_single_agent_fallback(command, context or {})
+            
+            self.logger.info(f"Command decomposed into {len(agent_tasks)} parallel agent tasks")
+            
+            # Create tasks for each agent
+            tasks = []
+            for agent_task in agent_tasks:
+                from agentic.models.task import Task
+                from agentic.core.intent_classifier import IntentClassifier
+                
+                # Create intent for this specific agent task
+                intent_classifier = IntentClassifier()
+                intent = await intent_classifier.analyze_intent(agent_task['command'])
+                
+                # Override intent with agent-specific info (TaskIntent doesn't have agent_type field)
+                intent.affected_areas = agent_task['focus_areas']
+                
+                # Create task
+                task = Task.from_intent(intent, agent_task['command'])
+                task.agent_type_hint = agent_task['agent_type']  # Hint for routing
+                task.coordination_context = agent_task.get('coordination_context', {})
+                tasks.append(task)
+            
+            # Execute all tasks in parallel with coordination
+            result = await self.execute_coordinated_tasks(tasks)
+            
+            # Send inter-agent messages for coordination
+            await self._send_coordination_messages(agent_tasks, result)
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"Multi-agent command execution failed: {e}")
+            raise
+    
+    async def _decompose_command_into_agent_tasks(self, command: str, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Intelligently decompose a command into specific agent tasks"""
+        command_lower = command.lower()
+        agent_tasks = []
+        
+        # Get agent type strategy from context
+        agent_type_strategy = context.get('agent_type_strategy', 'dynamic')
+        
+        # Define patterns that suggest multi-agent coordination
+        multi_component_patterns = [
+            'full stack', 'complete application', 'end-to-end', 'frontend and backend',
+            'with tests', 'including tests', 'and documentation', 'with deployment',
+            'microservices', 'multiple services', 'system', 'platform'
+        ]
+        
+        # Check if this is a multi-component request
+        is_multi_component = any(pattern in command_lower for pattern in multi_component_patterns)
+        
+        if not is_multi_component:
+            return []  # Single agent will handle
+        
+        # Task 1: Architecture Analysis
+        if any(keyword in command_lower for keyword in ['complete', 'system', 'platform', 'architecture']):
+            architect_agent_type = self._get_agent_type_for_role('architect', agent_type_strategy)
+            agent_tasks.append({
+                'agent_type': architect_agent_type,
+                'focus_areas': ['analysis', 'architecture', 'design'],
+                'command': f'Analyze the architecture requirements for: {command}. Create a detailed technical specification and project structure. Focus on component design, data flow, and API contracts.',
+                'coordination_context': {
+                    'role': 'architect',
+                    'dependencies': [],
+                    'provides': ['technical_spec', 'api_contracts', 'project_structure']
+                }
+            })
+        
+        # Task 2: Backend Development
+        if any(keyword in command_lower for keyword in ['backend', 'api', 'server', 'database', 'authentication', 'fastapi', 'django', 'flask']):
+            backend_agent_type = self._get_agent_type_for_role('backend_developer', agent_type_strategy)
+            agent_tasks.append({
+                'agent_type': backend_agent_type,
+                'focus_areas': ['backend', 'api', 'database', 'authentication'],
+                'command': f'Create the backend/API components for: {command}. Implement server-side logic, database models, API endpoints, and authentication. Coordinate with frontend for API contracts.',
+                'coordination_context': {
+                    'role': 'backend_developer',
+                    'dependencies': ['technical_spec'],
+                    'provides': ['api_endpoints', 'database_schema', 'backend_services']
+                }
+            })
+        
+        # Task 3: Frontend Development
+        if any(keyword in command_lower for keyword in ['frontend', 'ui', 'react', 'vue', 'angular', 'dashboard', 'interface', 'components']):
+            frontend_agent_type = self._get_agent_type_for_role('frontend_developer', agent_type_strategy)
+            agent_tasks.append({
+                'agent_type': frontend_agent_type,
+                'focus_areas': ['frontend', 'ui', 'components', 'styling'],
+                'command': f'Create the frontend/UI components for: {command}. Implement user interface, components, routing, and API integration. Coordinate with backend for data contracts.',
+                'coordination_context': {
+                    'role': 'frontend_developer',
+                    'dependencies': ['api_contracts', 'technical_spec'],
+                    'provides': ['ui_components', 'user_interface', 'client_integration']
+                }
+            })
+        
+        # Task 4: Testing & QA
+        if any(keyword in command_lower for keyword in ['test', 'testing', 'qa', 'quality']) or 'complete' in command_lower:
+            testing_agent_type = self._get_agent_type_for_role('qa_engineer', agent_type_strategy)
+            agent_tasks.append({
+                'agent_type': testing_agent_type,
+                'focus_areas': ['testing', 'qa', 'automation'],
+                'command': f'Create comprehensive tests for: {command}. Implement unit tests, integration tests, and end-to-end testing. Test all components and their interactions.',
+                'coordination_context': {
+                    'role': 'qa_engineer',
+                    'dependencies': ['backend_services', 'ui_components'],
+                    'provides': ['test_suite', 'quality_assurance', 'test_automation']
+                }
+            })
+        
+        # Task 5: DevOps/Deployment (if deployment mentioned)
+        if any(keyword in command_lower for keyword in ['deploy', 'docker', 'kubernetes', 'aws', 'production', 'ci/cd']):
+            devops_agent_type = self._get_agent_type_for_role('devops_engineer', agent_type_strategy)
+            agent_tasks.append({
+                'agent_type': devops_agent_type,
+                'focus_areas': ['devops', 'deployment', 'infrastructure'],
+                'command': f'Create deployment configuration for: {command}. Set up Docker, CI/CD, and production deployment scripts.',
+                'coordination_context': {
+                    'role': 'devops_engineer',
+                    'dependencies': ['backend_services', 'ui_components', 'test_suite'],
+                    'provides': ['deployment_config', 'infrastructure', 'ci_cd_pipeline']
+                }
+            })
+        
+        self.logger.info(f"Decomposed command into {len(agent_tasks)} agent tasks: {[task['coordination_context']['role'] for task in agent_tasks]}")
+        return agent_tasks
+    
+    def _get_agent_type_for_role(self, role: str, strategy: str) -> str:
+        """Determine the optimal agent type for a role based on strategy"""
+        
+        # Agent type mappings by strategy
+        if strategy == "claude":
+            # All Claude Code agents
+            return "claude_code"
+        
+        elif strategy == "aider":
+            # All Aider agents, specialized by role
+            if role == "architect":
+                return "aider_backend"  # Use backend for architecture
+            elif role == "frontend_developer":
+                return "aider_frontend"
+            elif role == "qa_engineer":
+                return "aider_testing"
+            else:
+                return "aider_backend"  # Default to backend
+        
+        elif strategy == "mixed":
+            # Force both types - alternate between them
+            mixed_mapping = {
+                "architect": "claude_code",
+                "backend_developer": "aider_backend", 
+                "frontend_developer": "claude_code",
+                "qa_engineer": "aider_testing",
+                "devops_engineer": "claude_code"
+            }
+            return mixed_mapping.get(role, "claude_code")
+        
+        else:  # dynamic (default)
+            # Intelligent selection based on role strengths
+            dynamic_mapping = {
+                "architect": "claude_code",        # Claude excels at analysis
+                "backend_developer": "aider_backend",  # Aider good for multi-file backend
+                "frontend_developer": "aider_frontend",  # Aider good for component creation
+                "qa_engineer": "claude_code",      # Claude good for test design
+                "devops_engineer": "aider_backend"    # Aider handles multi-file configs
+            }
+            return dynamic_mapping.get(role, "claude_code")
+    
+    async def _send_coordination_messages(self, agent_tasks: List[Dict[str, Any]], result: ExecutionResult) -> None:
+        """Send coordination messages between agents"""
+        try:
+            # This would integrate with the inter-agent communication system
+            for i, task in enumerate(agent_tasks):
+                role = task['coordination_context']['role']
+                dependencies = task['coordination_context']['dependencies']
+                provides = task['coordination_context']['provides']
+                
+                coordination_msg = f"Agent {role} completed. Provides: {', '.join(provides)}. Dependencies met: {', '.join(dependencies)}"
+                
+                # In a real implementation, this would send via the communication hub
+                self.logger.info(f"Coordination message: {coordination_msg}")
+                
+        except Exception as e:
+            self.logger.warning(f"Failed to send coordination messages: {e}")
+    
+    async def _execute_single_agent_fallback(self, command: str, context: Dict[str, Any]) -> ExecutionResult:
+        """Fallback to single agent execution"""
+        from agentic.core.intent_classifier import IntentClassifier
+        from agentic.models.task import Task
+        
+        intent_classifier = IntentClassifier()
+        intent = await intent_classifier.analyze_intent(command)
+        task = Task.from_intent(intent, command)
+        
+        return await self.execute_coordinated_tasks([task]) 

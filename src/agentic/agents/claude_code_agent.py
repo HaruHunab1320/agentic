@@ -117,8 +117,8 @@ class ClaudeCodeAgent(Agent):
             # Change to project directory
             os.chdir(self.project_root)
             
-            # Generate session ID for persistence
-            self.session_id = f"agentic_{uuid.uuid4().hex[:8]}"
+            # Generate session ID for persistence (Claude Code expects full UUID format)
+            self.session_id = str(uuid.uuid4())
             
             self.session.mark_active()
             self.logger.info(f"Enhanced Claude Code agent {self.config.name} started with session {self.session_id}")
@@ -282,7 +282,7 @@ This project uses Agentic's Claude Code integration for AI-powered development t
             cmd = self._build_enhanced_claude_command(task, execution_mode)
             
             self.logger.info(f"Executing {execution_mode} task: {task.command[:50]}...")
-            self.logger.debug(f"Running command: {' '.join(cmd[:5])}...")  # Log first 5 args for security
+            self.logger.debug(f"Full command: {' '.join(cmd)}")  # Log full command for debugging
             
             # Set up environment with API keys
             env = os.environ.copy()
@@ -332,12 +332,9 @@ This project uses Agentic's Claude Code integration for AI-powered development t
         cmd = ["claude"]
         
         # LEVERAGE NATIVE SESSION PERSISTENCE
-        if hasattr(self, 'session_id') and self.session_id:
-            # Try to resume existing session first
-            cmd.extend(["-r", self.session_id])
-        else:
-            # Use continue to pick up recent context in this directory
-            cmd.extend(["-c"])
+        # For multi-agent coordination, start fresh to avoid conversation state issues
+        # The continue flag can cause problems if there are dangling tool_use blocks
+        pass  # Start with fresh session
         
         # Set model if specified in agent config
         if hasattr(self, 'ai_model_config') and self.ai_model_config.get('model'):
@@ -670,7 +667,8 @@ Please provide:
         """Execute Claude Code with advanced features and proper output handling"""
         try:
             # Execute the command with appropriate timeout
-            timeout = 300 if execution_mode == "interactive" else 120  # 5 min for interactive, 2 min for print
+            # For multi-agent coordination, allow much longer timeouts
+            timeout = 1800 if execution_mode == "interactive" else 600  # 30 min for interactive, 10 min for print
             
             process = await asyncio.create_subprocess_exec(
                 *cmd,
@@ -734,10 +732,12 @@ Please provide:
         
         # Check for obvious errors first
         if return_code != 0:
+            error_msg = f"Command failed with exit code {return_code}"
             if stderr:
-                return False, stderr
-            else:
-                return False, "Command failed with non-zero exit code"
+                error_msg += f"\nStderr: {stderr}"
+            if stdout:
+                error_msg += f"\nStdout: {stdout}"
+            return False, error_msg
         
         # Handle JSON output format (used in print mode)
         if execution_mode == "print" and stdout.strip().startswith('{'):

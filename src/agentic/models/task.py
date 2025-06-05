@@ -49,6 +49,10 @@ class Task(BaseModel):
     result: Optional[Dict] = Field(default=None, description="Task execution result")
     error: Optional[str] = Field(default=None, description="Error message if task failed")
     
+    # Additional fields for multi-agent coordination
+    agent_type_hint: Optional[str] = Field(default=None, description="Hint for which agent type should handle this task")
+    coordination_context: Dict = Field(default_factory=dict, description="Context for multi-agent coordination")
+    
     # Compatibility properties for existing code
     @property
     def task_type(self) -> TaskType:

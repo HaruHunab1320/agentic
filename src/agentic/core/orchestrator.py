@@ -407,6 +407,20 @@ class Orchestrator(LoggerMixin):
         """Cancel a running background task"""
         return await self.coordination_engine.cancel_background_task(task_id)
     
+    async def execute_multi_agent_command(self, command: str, context: Optional[Dict[str, Any]] = None) -> ExecutionResult:
+        """Execute a command using multiple coordinated agents"""
+        if not self._is_initialized:
+            raise RuntimeError("Orchestrator not initialized. Call initialize() first.")
+        
+        self.logger.info(f"Executing multi-agent command: {command[:50]}...")
+        
+        try:
+            return await self.coordination_engine.execute_multi_agent_command(command, context)
+            
+        except Exception as e:
+            self.logger.error(f"Multi-agent command execution failed: {e}")
+            raise
+    
     # NEW: Inter-agent communication methods
     async def send_inter_agent_message(
         self,
