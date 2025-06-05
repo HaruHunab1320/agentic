@@ -275,7 +275,7 @@ def exec(ctx: click.Context, command: tuple, agent: str, context: str):
                     )
                     progress.remove_task(task)
                     
-                    if result and result.success:
+                    if result and result.status == "completed":
                         console.print("[bold green]✅ Command executed successfully![/bold green]")
                         
                         # Display results
@@ -286,7 +286,7 @@ def exec(ctx: click.Context, command: tuple, agent: str, context: str):
                             console.print(f"\n[dim]Agent used: {result.agent_id}[/dim]")
                             
                     else:
-                        error_msg = result.error if result else 'No result returned'
+                        error_msg = result.error if result and result.error else 'No result returned or task failed'
                         console.print(f"[bold red]❌ Command failed: {error_msg}[/bold red]")
                         
                 except Exception as e:

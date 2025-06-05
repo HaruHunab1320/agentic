@@ -212,15 +212,23 @@ class BaseAiderAgent(Agent, LoggerMixin):
             return False
     
     async def execute_task(self, task: Task) -> TaskResult:
-        """Execute a task using Aider"""
-        self.logger.info(f"Executing task: {task.command[:100]}...")
-        
+        """Execute a task using Aider with enhanced capabilities"""
         try:
-            # Prepare Aider command with task-specific context
-            aider_command = await self._prepare_aider_command(task)
+            # Extract target files from the command for better Aider targeting
+            target_files = self._extract_target_files(task.command)
             
-            # Execute the command
-            result = await self._run_aider_command(aider_command, task)
+            # Build enhanced Aider command with better file targeting
+            cmd = await self._build_enhanced_aider_command(task, target_files)
+            
+            self.logger.info(f"Executing task: {task.command[:50]}...")
+            self.logger.debug(f"Running command: {' '.join(cmd[:5])}...")  # Log first 5 args only
+            
+            # Set up environment with API keys
+            env = os.environ.copy()
+            self._set_environment_variables(env)
+            
+            # Execute Aider with better error handling and output parsing
+            result = await self._execute_aider_with_session_management(cmd, env, task)
             
             return result
             
@@ -228,129 +236,253 @@ class BaseAiderAgent(Agent, LoggerMixin):
             self.logger.error(f"Task execution failed: {e}")
             return TaskResult(
                 task_id=task.id,
-                agent_id=self.session.id if self.session else "unknown",
                 status="failed",
-                output="",
-                error=str(e)
+                error=str(e),
+                agent_id=self.session.id if self.session else "unknown"
             )
     
-    async def _prepare_aider_command(self, task: Task) -> List[str]:
-        """Prepare Aider command for the specific task"""
-        command = self.aider_args.copy()
+    def _extract_target_files(self, command: str) -> List[str]:
+        """Extract specific file targets from command for better Aider targeting"""
+        import re
         
-        # Add target files if mentioned in the task
-        target_files = self._extract_target_files(task)
-        if target_files:
-            command.extend(target_files)
+        target_files = []
         
-        # Add the actual command/prompt
-        prompt = await self._build_agent_prompt(task)
-        command.extend(["--message", prompt])
-        
-        return command
-    
-    def _extract_target_files(self, task: Task) -> List[str]:
-        """Extract target files mentioned in the task command"""
-        # Look for file patterns in the command
+        # Look for explicit file patterns
         file_patterns = [
-            r'(\w+\.py)',  # Python files
-            r'(\w+\.js)',  # JavaScript files
-            r'(\w+\.ts)',  # TypeScript files
-            r'(\w+\.jsx)', # JSX files
-            r'(\w+\.tsx)', # TSX files
-            r'(\w+\.go)',  # Go files
-            r'(\w+\.rs)',  # Rust files
-            r'(\w+\.java)', # Java files
-            r'(\w+\.cpp)', # C++ files
-            r'(\w+\.c)',   # C files
-            r'(\w+\.h)',   # Header files
+            r'(\w+\.py)',           # Python files
+            r'(\w+\.js)',           # JavaScript files  
+            r'(\w+\.ts)',           # TypeScript files
+            r'(\w+\.html)',         # HTML files
+            r'(\w+\.css)',          # CSS files
+            r'(\w+\.json)',         # JSON files
+            r'(src/[\w/]+\.py)',    # Source path files
+            r'(tests?/[\w/]+\.py)', # Test files
         ]
         
-        files = []
         for pattern in file_patterns:
-            matches = re.findall(pattern, task.command, re.IGNORECASE)
-            files.extend(matches)
+            matches = re.findall(pattern, command, re.IGNORECASE)
+            target_files.extend(matches)
         
-        # Check if files exist in workspace
-        existing_files = []
-        for file in files:
-            file_path = self.config.workspace_path / file
-            if file_path.exists():
-                existing_files.append(str(file))
+        # Look for directory patterns that suggest file creation
+        if 'create' in command.lower() or 'add' in command.lower():
+            # Extract directory hints for new files
+            dir_patterns = [
+                r'src/([\w/]+)/',
+                r'tests?/([\w/]+)/',
+                r'(auth|api|models|services)/'
+            ]
+            
+            for pattern in dir_patterns:
+                matches = re.findall(pattern, command, re.IGNORECASE)
+                if matches:
+                    # Don't add directories directly, let Aider handle file creation
+                    pass
         
-        return existing_files
+        return list(set(target_files))  # Remove duplicates
     
-    async def _build_agent_prompt(self, task: Task) -> str:
-        """Build agent-specific prompt for the task"""
-        # Base prompt with agent context
-        prompt_parts = [
-            f"You are a {self.config.name} agent specializing in: {', '.join(self.config.focus_areas)}.",
-            f"Task: {task.command}",
-        ]
+    async def _build_enhanced_aider_command(self, task: Task, target_files: List[str]) -> List[str]:
+        """Build enhanced Aider command with advanced features"""
+        cmd = ["aider"]
         
-        # Add agent-specific context
-        agent_context = await self._get_agent_context(task)
-        if agent_context:
-            prompt_parts.append(f"Context: {agent_context}")
+        # Core Aider flags for automation
+        cmd.extend(["--yes-always", "--no-git"])
         
-        return "\n\n".join(prompt_parts)
+        # Set model based on agent configuration
+        if hasattr(self, 'ai_model_config') and self.ai_model_config.get('model'):
+            model = self.ai_model_config['model']
+            # Map our model names to Aider-compatible names
+            if model == 'gemini':
+                cmd.extend(["--model", "gemini/gemini-1.5-pro-latest"])
+            elif model in ['claude', 'claude-sonnet']:
+                cmd.extend(["--model", "sonnet"])
+            else:
+                cmd.extend(["--model", model])
+        else:
+            # Default to Gemini for Aider agents
+            cmd.extend(["--model", "gemini/gemini-1.5-pro-latest"])
+        
+        # Add target files if we found any (following Aider best practices)
+        if target_files:
+            # Only add files that likely need editing, not extra context files
+            relevant_files = [f for f in target_files if self._is_likely_edit_target(f, task.command)]
+            if relevant_files:
+                cmd.extend(relevant_files)
+        
+        # Build specialized message based on agent type and task
+        message = self._build_specialized_message(task)
+        cmd.extend(["--message", message])
+        
+        return cmd
     
-    async def _get_agent_context(self, task: Task) -> str:
-        """Get agent-specific context for the task"""
-        # Override in specialized agents
-        return ""
+    def _is_likely_edit_target(self, filename: str, command: str) -> bool:
+        """Determine if a file is likely to be edited based on command context"""
+        command_lower = command.lower()
+        
+        # Files explicitly mentioned for creation/modification
+        if any(action in command_lower for action in ['create', 'add', 'modify', 'update', 'edit']):
+            if filename.lower() in command_lower:
+                return True
+        
+        # Configuration and test files are usually edit targets
+        if any(pattern in filename.lower() for pattern in ['config', 'test', 'spec']):
+            return True
+            
+        # Source files in src/ are usually edit targets
+        if filename.startswith('src/'):
+            return True
+            
+        return False
     
-    async def _run_aider_command(self, command: List[str], task: Task) -> TaskResult:
-        """Run the Aider command and capture results"""
+    def _build_specialized_message(self, task: Task) -> str:
+        """Build specialized message based on agent type and expertise"""
+        base_message = f"You are a {self.agent_type.value} agent specializing in: {', '.join(self.focus_areas)}.\n\n"
+        
+        # Add task
+        base_message += f"Task: {task.command}\n\n"
+        
+        # Add specialized context based on agent type
+        if self.agent_type.value == "aider_frontend":
+            base_message += """Context: Focus on frontend development including:
+- UI/UX design and implementation
+- Component architecture and reusability  
+- Modern frontend frameworks (React, Vue, Angular)
+- CSS/styling and responsive design
+- Frontend build tools and optimization
+- Accessibility and performance
+
+Prioritize working with these file patterns:
+- *.js, *.jsx, *.ts, *.tsx, *.vue, *.svelte
+- *.css, *.scss, *.less, *.styled.*
+- **/components/**, **/pages/**, **/views/**
+- package.json, webpack.config.js, vite.config.*"""
+
+        elif self.agent_type.value == "aider_backend":
+            base_message += """Context: Focus on backend development including:
+- API design and implementation (REST, GraphQL)
+- Database design, queries, and migrations
+- Authentication and authorization
+- Server configuration and middleware
+- Performance optimization and caching
+- Error handling and logging
+
+Prioritize working with these file patterns:
+- *.py, *.js, *.ts, *.go, *.rs, *.java
+- **/models/**, **/api/**, **/services/**
+- requirements.txt, go.mod, Cargo.toml, pom.xml
+- Database migration files and SQL scripts"""
+
+        elif self.agent_type.value == "aider_testing":
+            base_message += """Context: Focus on testing and quality assurance including:
+- Unit testing and test-driven development
+- Integration and end-to-end testing
+- Test automation and CI/CD
+- Code coverage and quality metrics
+- Performance and load testing
+- Bug reproduction and regression testing
+
+Prioritize working with these file patterns:
+- test_*.py, *_test.py, *.test.js, *.spec.*
+- **/tests/**, **/test/**, **/__tests__/**
+- pytest.ini, jest.config.*, karma.conf.*
+- Coverage configuration and test utilities"""
+        
+        return base_message
+    
+    async def _execute_aider_with_session_management(self, cmd: List[str], env: dict, task: Task) -> TaskResult:
+        """Execute Aider with better session management and output parsing"""
         try:
-            self.logger.debug(f"Running command: {' '.join(command)}")
-            
-            # Prepare environment with current environment plus any API keys we've set
-            env = os.environ.copy()
-            
-            # Run Aider command
+            # Execute the command
             process = await asyncio.create_subprocess_exec(
-                *command,
+                *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                cwd=self.config.workspace_path,
-                env=env  # Pass the environment with API keys
+                env=env,
+                cwd=str(self.workspace_path)
             )
             
             stdout, stderr = await process.communicate()
+            output = stdout.decode('utf-8', errors='replace')
+            error_output = stderr.decode('utf-8', errors='replace')
             
-            stdout_text = stdout.decode('utf-8', errors='replace')
-            stderr_text = stderr.decode('utf-8', errors='replace')
+            # Parse Aider output for better result reporting
+            success, parsed_output = self._parse_aider_output(output, error_output, process.returncode)
             
-            success = process.returncode == 0
-            
-            # Log the output
             if success:
-                self.logger.info(f"Task completed successfully")
-                if stdout_text:
-                    self.logger.debug(f"Output: {stdout_text[:500]}...")
+                self.logger.info("Task completed successfully")
+                return TaskResult(
+                    task_id=task.id,
+                    status="completed",
+                    output=parsed_output,
+                    agent_id=self.session.id if self.session else "unknown"
+                )
             else:
-                self.logger.error(f"Task failed with return code: {process.returncode}")
-                if stderr_text:
-                    self.logger.error(f"Error: {stderr_text[:500]}...")
-            
-            return TaskResult(
-                task_id=task.id,
-                agent_id=self.session.id if self.session else "unknown",
-                status="completed" if success else "failed",
-                output=stdout_text,
-                error=stderr_text if not success else ""
-            )
-            
+                self.logger.error(f"Task failed: {parsed_output}")
+                return TaskResult(
+                    task_id=task.id,
+                    status="failed",
+                    error=parsed_output,
+                    agent_id=self.session.id if self.session else "unknown"
+                )
+                
         except Exception as e:
-            self.logger.error(f"Command execution failed: {e}")
+            self.logger.error(f"Execution error: {e}")
             return TaskResult(
                 task_id=task.id,
-                agent_id=self.session.id if self.session else "unknown",
-                status="failed",
-                output="",
-                error=str(e)
+                status="failed", 
+                error=str(e),
+                agent_id=self.session.id if self.session else "unknown"
             )
+    
+    def _parse_aider_output(self, stdout: str, stderr: str, return_code: int) -> tuple[bool, str]:
+        """Parse Aider output to extract meaningful results"""
+        
+        # Check for success indicators
+        success_indicators = [
+            "Applied edit to",
+            "Created file",
+            "Modified file", 
+            "Changes applied successfully"
+        ]
+        
+        # Check for error indicators
+        error_indicators = [
+            "Error:",
+            "Failed to",
+            "Could not",
+            "Exception:",
+            "Permission denied"
+        ]
+        
+        combined_output = stdout + stderr
+        
+        # Determine success based on return code and output content
+        if return_code == 0:
+            # Look for actual changes or meaningful output
+            if any(indicator in combined_output for indicator in success_indicators):
+                success = True
+            elif "Tokens:" in combined_output:  # Aider ran but maybe no changes needed
+                success = True
+            else:
+                success = False
+        else:
+            success = False
+            
+        # Extract the most relevant output
+        if not success and stderr:
+            parsed_output = stderr
+        else:
+            # Extract meaningful parts of stdout
+            lines = stdout.split('\n')
+            relevant_lines = []
+            
+            for line in lines:
+                # Skip empty lines and progress indicators
+                if line.strip() and not line.startswith('⠋') and not line.startswith('⠴'):
+                    relevant_lines.append(line.strip())
+            
+            parsed_output = '\n'.join(relevant_lines) if relevant_lines else stdout
+            
+        return success, parsed_output
     
     async def health_check(self) -> bool:
         """Check if the agent is healthy"""

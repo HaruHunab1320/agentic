@@ -142,11 +142,11 @@ class CommandRouter(LoggerMixin):
         supporting_agents = []
         
         # Don't include primary agent or reasoning agent in supporting agents
-        excluded_agents = {primary_agent}
+        excluded_agent_ids = {primary_agent.id}
         if reasoning_agent:
-            excluded_agents.add(reasoning_agent)
+            excluded_agent_ids.add(reasoning_agent.id)
         
-        candidate_agents = [a for a in available_agents if a not in excluded_agents]
+        candidate_agents = [a for a in available_agents if a.id not in excluded_agent_ids]
         
         # For multi-area tasks, include agents from other affected areas
         for area in intent.affected_areas:
@@ -173,12 +173,12 @@ class CommandRouter(LoggerMixin):
                 if claude_agents:
                     supporting_agents.append(claude_agents[0])
         
-        # Remove duplicates while preserving order
-        seen = set()
+        # Remove duplicates while preserving order using agent IDs
+        seen_ids = set()
         unique_supporting = []
         for agent in supporting_agents:
-            if agent not in seen:
-                seen.add(agent)
+            if agent.id not in seen_ids:
+                seen_ids.add(agent.id)
                 unique_supporting.append(agent)
         
         return unique_supporting

@@ -15,7 +15,7 @@ from agentic.core.coordination_engine import CoordinationEngine, ExecutionResult
 from agentic.core.intent_classifier import IntentClassifier
 from agentic.core.project_analyzer import ProjectAnalyzer
 from agentic.core.shared_memory import SharedMemory
-from agentic.models.agent import AgentSession
+from agentic.models.agent import AgentSession, AgentType
 from agentic.models.config import AgenticConfig
 from agentic.models.project import ProjectStructure
 from agentic.models.task import ExecutionPlan, Task, TaskResult
@@ -385,28 +385,14 @@ class Orchestrator(LoggerMixin):
             raise
     
     async def _auto_spawn_agent(self, intent) -> None:
-        """Automatically spawn an appropriate agent based on task intent"""
-        from agentic.models.agent import AgentConfig, AgentType
+        """Automatically spawn an appropriate agent based on task intent and characteristics"""
+        from agentic.models.agent import AgentConfig
         
-        # Determine best agent type for the task
-        agent_type = AgentType.AIDER_BACKEND  # Default
-        focus_areas = ["general"]
+        # Analyze task characteristics
+        command_lower = intent.command.lower() if hasattr(intent, 'command') else ""
         
-        if hasattr(intent, 'affected_areas') and intent.affected_areas:
-            if "frontend" in intent.affected_areas:
-                agent_type = AgentType.AIDER_FRONTEND
-                focus_areas = ["frontend", "ui", "components"]
-            elif "testing" in intent.affected_areas:
-                agent_type = AgentType.AIDER_TESTING
-                focus_areas = ["testing", "qa"]
-            elif "backend" in intent.affected_areas:
-                agent_type = AgentType.AIDER_BACKEND
-                focus_areas = ["backend", "api", "database"]
-        
-        # Check if this is a reasoning task
-        if hasattr(intent, 'requires_reasoning') and intent.requires_reasoning:
-            agent_type = AgentType.CLAUDE_CODE
-            focus_areas = ["reasoning", "debugging", "analysis"]
+        # Determine agent type based on multiple factors
+        agent_type, focus_areas = self._determine_optimal_agent(intent, command_lower)
         
         # Create agent config using unified model configuration
         config = AgentConfig(
@@ -421,4 +407,132 @@ class Orchestrator(LoggerMixin):
         
         # Spawn the agent
         session = await self.agent_registry.spawn_agent(config)
-        self.logger.info(f"Auto-spawned {agent_type.value} agent: {session.id}") 
+        self.logger.info(f"Auto-spawned {agent_type.value} agent: {session.id}")
+
+    def _determine_optimal_agent(self, intent, command_lower: str) -> tuple:
+        """Determine the optimal agent type based on task characteristics"""
+        
+        # Quick analysis/explanation tasks → Claude Code
+        quick_analysis_keywords = [
+            'explain', 'analyze', 'review', 'what does', 'how does', 'why does',
+            'understand', 'summarize', 'describe', 'debug', 'find bug', 'troubleshoot',
+            'examine', 'inspect', 'check', 'evaluate', 'assess', 'investigate'
+        ]
+        
+        # Multi-file/complex implementation → Aider  
+        complex_implementation_keywords = [
+            'create system', 'build', 'implement feature', 'refactor', 'migrate',
+            'add tests', 'authentication system', 'api endpoints', 'database',
+            'develop', 'implement', 'generate', 'construct', 'establish'
+        ]
+        
+        # File scope indicators
+        single_file_indicators = [
+            'file', 'function', 'class', 'method', 'specific', 'single',
+            'one file', 'this file', 'in models.py', 'in config.py'
+        ]
+        
+        multi_file_indicators = [
+            'system', 'module', 'package', 'application', 'project', 'architecture',
+            'tests', 'endpoints', 'models and', 'service and', 'complete',
+            'multiple files', 'across files', 'entire project'
+        ]
+        
+        # Creative vs systematic indicators
+        creative_keywords = [
+            'creative', 'innovative', 'alternative', 'better way', 'optimize',
+            'improve', 'enhance', 'suggestion', 'ideas', 'ways to'
+        ]
+        
+        systematic_keywords = [
+            'step by step', 'thorough', 'comprehensive', 'detailed', 'complete',
+            'systematic', 'methodical', 'following best practices', 'structured'
+        ]
+        
+        # Initialize scoring
+        claude_score = 0
+        aider_score = 0
+        
+        # Score based on task type - increased weight for analysis tasks
+        if any(keyword in command_lower for keyword in quick_analysis_keywords):
+            claude_score += 5  # Increased from 3
+        
+        if any(keyword in command_lower for keyword in complex_implementation_keywords):
+            aider_score += 3
+            
+        # Score based on file scope
+        if any(indicator in command_lower for indicator in single_file_indicators):
+            claude_score += 2
+            
+        if any(indicator in command_lower for indicator in multi_file_indicators):
+            aider_score += 2
+            
+        # Score based on approach needed
+        if any(keyword in command_lower for keyword in creative_keywords):
+            claude_score += 2  # Increased from 1
+            
+        if any(keyword in command_lower for keyword in systematic_keywords):
+            aider_score += 1
+            
+        # Strong indicators for explanation/analysis tasks
+        explanation_patterns = [
+            'explain the', 'what is', 'how does', 'why does', 'analyze the',
+            'review the', 'understand the', 'describe the'
+        ]
+        
+        if any(pattern in command_lower for pattern in explanation_patterns):
+            claude_score += 4  # Strong preference for Claude on explanation tasks
+            
+        # Strong indicators for creation/implementation tasks
+        creation_patterns = [
+            'create a', 'build a', 'implement a', 'develop a', 'generate a',
+            'add new', 'set up', 'establish'
+        ]
+        
+        if any(pattern in command_lower for pattern in creation_patterns):
+            aider_score += 4  # Strong preference for Aider on creation tasks
+            
+        # Consider intent properties if available
+        if hasattr(intent, 'requires_reasoning') and intent.requires_reasoning:
+            claude_score += 2
+            
+        if hasattr(intent, 'complexity_score') and intent.complexity_score > 0.5:
+            aider_score += 2
+            
+        if hasattr(intent, 'estimated_duration') and intent.estimated_duration > 15:
+            aider_score += 1  # Longer tasks better for Aider sessions
+            
+        # Check for multi-file patterns
+        file_count_indicators = command_lower.count(' and ') + command_lower.count(', ')
+        if file_count_indicators >= 2:
+            aider_score += 2
+            
+        # Default focus areas and agent selection
+        if claude_score > aider_score:
+            agent_type = AgentType.CLAUDE_CODE
+            focus_areas = ["analysis", "debugging", "optimization", "code_review"]
+        else:
+            # Determine Aider specialization
+            if hasattr(intent, 'affected_areas') and intent.affected_areas:
+                if "frontend" in intent.affected_areas:
+                    agent_type = AgentType.AIDER_FRONTEND
+                    focus_areas = ["frontend", "ui", "components", "styling"]
+                elif "testing" in intent.affected_areas:
+                    agent_type = AgentType.AIDER_TESTING  
+                    focus_areas = ["testing", "qa", "test_automation"]
+                else:
+                    agent_type = AgentType.AIDER_BACKEND
+                    focus_areas = ["backend", "api", "database", "architecture"]
+            else:
+                # Check command for specialization hints
+                if any(word in command_lower for word in ['react', 'frontend', 'ui', 'component', 'css', 'html']):
+                    agent_type = AgentType.AIDER_FRONTEND
+                    focus_areas = ["frontend", "ui", "components", "styling"]
+                elif any(word in command_lower for word in ['test', 'testing', 'unittest', 'pytest', 'spec']):
+                    agent_type = AgentType.AIDER_TESTING
+                    focus_areas = ["testing", "qa", "test_automation"]
+                else:
+                    agent_type = AgentType.AIDER_BACKEND  # Default
+                    focus_areas = ["backend", "api", "database", "architecture"]
+        
+        return agent_type, focus_areas 

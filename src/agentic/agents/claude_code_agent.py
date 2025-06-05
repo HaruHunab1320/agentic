@@ -21,26 +21,14 @@ from agentic.models.task import Task, TaskResult
 class ClaudeCodeAgent(Agent):
     """Enhanced agent that leverages Claude Code CLI's full feature set."""
     
-    def __init__(self, name: str, config: Dict[str, Any]):
-        # Convert dict config to AgentConfig
-        agent_config = AgentConfig(
-            agent_type=AgentType.CLAUDE_CODE,
-            name=name,
-            workspace_path=Path(config.get("project_root", ".")),
-            focus_areas=config.get("focus_areas", ["coding", "analysis", "refactoring"]),
-            ai_model_config={"model": config.get("claude_model", "sonnet")},
-            tool_config=config.get("tool_config", {}),
-            max_tokens=config.get("max_tokens", 100000),
-            temperature=config.get("temperature", 0.1)
-        )
-        
-        super().__init__(agent_config)
+    def __init__(self, config: AgentConfig):
+        super().__init__(config)
         self.logger = logging.getLogger(__name__)
         self.process: Optional[subprocess.Popen] = None
         self.temp_files: List[Path] = []
         
         # Enhanced Claude Code settings
-        self.claude_model = config.get("claude_model", "sonnet")
+        self.claude_model = config.ai_model_config.get('model', 'sonnet')
         self.session_id: Optional[str] = None
         self.memory_initialized = False
         
@@ -55,7 +43,7 @@ class ClaudeCodeAgent(Agent):
             "documentation": ["Edit", "Write", "Bash(find *)", "Bash(grep *)"]
         }
         
-        self.project_root = Path(config.get("project_root", "."))
+        self.project_root = config.workspace_path
     
     def get_capabilities(self) -> AgentCapability:
         """Return enhanced agent capabilities."""
@@ -216,204 +204,256 @@ This project uses Agentic's Claude Code integration for AI-powered development t
             return False
     
     async def execute_task(self, task: Task) -> TaskResult:
-        """Execute a task using enhanced Claude Code CLI features."""
-        if not self.session or not self.session.is_available:
+        """Execute a task using Claude Code with enhanced CLI features"""
+        try:
+            # Determine optimal execution mode based on task characteristics
+            execution_mode = self._determine_execution_mode(task)
+            
+            # Build advanced Claude Code command
+            cmd = self._build_enhanced_claude_command(task, execution_mode)
+            
+            self.logger.info(f"Executing {execution_mode} task: {task.command[:50]}...")
+            self.logger.debug(f"Running command: {' '.join(cmd[:5])}...")  # Log first 5 args for security
+            
+            # Set up environment with API keys
+            env = os.environ.copy()
+            self._set_environment_variables(env)
+            
+            # Execute Claude Code with appropriate handling
+            result = await self._execute_claude_with_advanced_features(cmd, env, task, execution_mode)
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"Task execution failed: {e}")
             return TaskResult(
                 task_id=task.id,
-                agent_id=self.config.name,
                 status="failed",
-                output="Agent not available",
-                error="Agent session not available",
-                metadata={"error": "Agent session not available"}
+                error=str(e),
+                agent_id=self.session.id if self.session else "unknown"
             )
+    
+    def _determine_execution_mode(self, task: Task) -> str:
+        """Determine optimal execution mode based on task characteristics"""
+        command_lower = task.command.lower()
         
-        self.session.mark_busy(task.id)
+        # Quick analysis tasks → print mode for fast results
+        quick_tasks = [
+            'explain', 'analyze', 'what does', 'how does', 'describe',
+            'summarize', 'review', 'debug', 'find', 'check'
+        ]
         
+        # Interactive tasks → interactive mode for iterative work
+        interactive_tasks = [
+            'help me', 'work with me', 'iterative', 'step by step',
+            'refactor', 'improve', 'optimize'
+        ]
+        
+        # Determine mode
+        if any(task in command_lower for task in quick_tasks):
+            return "print"  # One-shot mode for quick results
+        elif any(task in command_lower for task in interactive_tasks):
+            return "interactive"  # Interactive mode for complex work
+        else:
+            # Default to print mode for most automated tasks
+            return "print"
+    
+    def _build_enhanced_claude_command(self, task: Task, execution_mode: str) -> List[str]:
+        """Build enhanced Claude Code command with advanced CLI features"""
+        cmd = ["claude"]
+        
+        # Set model if specified in agent config
+        if hasattr(self, 'ai_model_config') and self.ai_model_config.get('model'):
+            model = self.ai_model_config['model']
+            # Map our model names to Claude-compatible names
+            if model in ['claude', 'claude-sonnet', 'sonnet']:
+                cmd.extend(["--model", "sonnet"])
+            elif model == 'opus':
+                cmd.extend(["--model", "opus"])
+            # For other models, let Claude use its default
+        
+        if execution_mode == "print":
+            # Print mode for quick, automated tasks
+            cmd.extend(["-p"])
+            
+            # Use JSON output format for better parsing in automation
+            cmd.extend(["--output-format", "json"])
+            
+            # Limit turns for automated execution
+            cmd.extend(["--max-turns", "3"])
+            
+            # Enable verbose logging for debugging
+            cmd.extend(["--verbose"])
+            
+        elif execution_mode == "interactive":
+            # Interactive mode - let Claude handle session management
+            # Add continue flag if this is part of an ongoing session
+            if hasattr(self, 'session_id') and self.session_id:
+                cmd.extend(["--continue"])
+        
+        # Add the task as the query
+        enhanced_prompt = self._build_enhanced_prompt(task)
+        cmd.append(enhanced_prompt)
+        
+        return cmd
+    
+    def _build_enhanced_prompt(self, task: Task) -> str:
+        """Build enhanced prompt with agent context and specialized instructions"""
+        prompt_parts = []
+        
+        # Agent identity and specialization
+        prompt_parts.append(f"You are a Claude Code agent specialized in: {', '.join(self.focus_areas)}.")
+        
+        # Add context about the current workspace
+        if hasattr(self, 'workspace_path'):
+            prompt_parts.append(f"Working in project directory: {self.workspace_path}")
+        
+        # Add agent-specific context based on focus areas
+        context_additions = []
+        if "analysis" in self.focus_areas:
+            context_additions.append("Provide detailed analysis with specific examples and code references.")
+        if "debugging" in self.focus_areas:
+            context_additions.append("Focus on identifying root causes and providing actionable solutions.")
+        if "optimization" in self.focus_areas:
+            context_additions.append("Suggest performance improvements and best practices.")
+        if "code_review" in self.focus_areas:
+            context_additions.append("Evaluate code quality, security, and maintainability.")
+            
+        if context_additions:
+            prompt_parts.append("Additional context: " + " ".join(context_additions))
+        
+        # Add the main task
+        prompt_parts.append(f"Task: {task.command}")
+        
+        # For analysis tasks, add specific instructions
+        if any(keyword in task.command.lower() for keyword in ['analyze', 'explain', 'review']):
+            prompt_parts.append("""
+Please provide:
+1. Clear explanation of what you found
+2. Specific code examples with line references when applicable  
+3. Actionable recommendations
+4. Any potential issues or improvements identified""")
+        
+        return "\n\n".join(prompt_parts)
+    
+    async def _execute_claude_with_advanced_features(self, cmd: List[str], env: dict, task: Task, execution_mode: str) -> TaskResult:
+        """Execute Claude Code with advanced features and proper output handling"""
         try:
-            # Build enhanced claude command
-            cmd = await self._build_enhanced_command(task)
+            # Execute the command with appropriate timeout
+            timeout = 300 if execution_mode == "interactive" else 120  # 5 min for interactive, 2 min for print
             
-            self.logger.info(f"Executing enhanced Claude Code command for task {task.id}")
-            self.logger.debug(f"Command: {' '.join(cmd)}")
-            
-            # Execute the command
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                cwd=str(self.project_root)
+                env=env,
+                cwd=str(self.workspace_path)
             )
             
-            stdout, stderr = await process.communicate()
-            
-            # Process results with enhanced parsing
-            if process.returncode == 0:
-                result = await self._parse_claude_output(stdout.decode('utf-8').strip(), task)
-                
-                self.session.mark_idle()
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(), 
+                    timeout=timeout
+                )
+            except asyncio.TimeoutError:
+                process.kill()
+                await process.wait()
                 return TaskResult(
                     task_id=task.id,
-                    agent_id=self.config.name,
+                    status="failed",
+                    error=f"Task timed out after {timeout} seconds",
+                    agent_id=self.session.id if self.session else "unknown"  
+                )
+            
+            output = stdout.decode('utf-8', errors='replace')
+            error_output = stderr.decode('utf-8', errors='replace')
+            
+            # Parse output based on execution mode
+            success, parsed_output = self._parse_claude_output(
+                output, error_output, process.returncode, execution_mode
+            )
+            
+            if success:
+                self.logger.info("Task completed successfully")
+                return TaskResult(
+                    task_id=task.id,
                     status="completed",
-                    output=result["output"],
-                    metadata={
-                        "claude_model": self.claude_model,
-                        "session_id": self.session_id,
-                        "tools_used": result.get("tools_used", []),
-                        "thinking_time": result.get("thinking_time"),
-                        "files_modified": result.get("files_modified", []),
-                        "output_length": len(result["output"])
-                    }
+                    output=parsed_output,
+                    agent_id=self.session.id if self.session else "unknown"
                 )
             else:
-                error_msg = stderr.decode('utf-8').strip()
-                self.logger.error(f"Claude Code execution failed: {error_msg}")
-                
-                self.session.mark_idle()
+                self.logger.error(f"Task failed: {parsed_output}")
                 return TaskResult(
                     task_id=task.id,
-                    agent_id=self.config.name,
                     status="failed",
-                    output=f"Claude Code execution failed: {error_msg}",
-                    error=error_msg,
-                    metadata={"error": error_msg, "return_code": process.returncode, "session_id": self.session_id}
+                    error=parsed_output,
+                    agent_id=self.session.id if self.session else "unknown"
                 )
                 
         except Exception as e:
-            self.logger.error(f"Error executing task {task.id}: {e}")
-            self.session.mark_idle()
+            self.logger.error(f"Execution error: {e}")
             return TaskResult(
                 task_id=task.id,
-                agent_id=self.config.name,
                 status="failed",
-                output=f"Execution error: {str(e)}",
                 error=str(e),
-                metadata={"error": str(e), "session_id": self.session_id}
+                agent_id=self.session.id if self.session else "unknown"
             )
-
-    async def _build_enhanced_command(self, task: Task) -> List[str]:
-        """Build enhanced Claude Code command with full feature utilization."""
-        cmd = ["claude"]
+    
+    def _parse_claude_output(self, stdout: str, stderr: str, return_code: int, execution_mode: str) -> tuple[bool, str]:
+        """Parse Claude Code output with mode-specific handling"""
         
-        # Add enhanced options first
-        # Use print mode for automation with JSON output for better parsing  
-        cmd.extend(["--print", "--output-format", "json"])
-        
-        # Add model
-        if self.claude_model:
-            cmd.extend(["--model", self.claude_model])
-        
-        # TODO: Fix allowedTools syntax - currently causing argument parsing issues
-        # Add task-specific tool permissions as comma-separated list
-        # allowed_tools = self._get_task_tools(task)
-        # if allowed_tools:
-        #     tools_str = ",".join(allowed_tools)
-        #     cmd.extend(["--allowedTools", tools_str])
-        
-        # Add enhanced prompt with thinking triggers as the final argument
-        prompt = await self._build_enhanced_prompt(task)
-        cmd.append(prompt)
-        
-        return cmd
-
-    def _get_task_tools(self, task: Task) -> List[str]:
-        """Get appropriate tools based on task type and content."""
-        task_type = task.intent.task_type.value if task.intent else "general"
-        command_lower = task.command.lower()
-        
-        # Start with base tools for the task type
-        tools = self.tool_presets.get(task_type, self.tool_presets["coding"]).copy()
-        
-        # Add specific tools based on command content
-        if "git" in command_lower or "commit" in command_lower or "branch" in command_lower:
-            tools.extend(self.tool_presets["git"])
-        
-        if "test" in command_lower or "pytest" in command_lower:
-            tools.extend(self.tool_presets["testing"])
-        
-        if "document" in command_lower or "readme" in command_lower:
-            tools.extend(self.tool_presets["documentation"])
-        
-        # Remove duplicates while preserving order
-        return list(dict.fromkeys(tools))
-
-    async def _build_enhanced_prompt(self, task: Task) -> str:
-        """Build enhanced prompt with thinking triggers and context."""
-        task_type = task.intent.task_type.value if task.intent else "general"
-        command = task.command
-        
-        # Determine if this needs extended thinking
-        needs_thinking = any(keyword in command.lower() for keyword in [
-            "architecture", "design", "refactor", "complex", "plan", "strategy",
-            "analyze", "review", "optimize", "debug"
-        ])
-        
-        prompt_parts = []
-        
-        # Add thinking trigger for complex tasks
-        if needs_thinking:
-            if task_type in ["implement", "refactor"]:
-                prompt_parts.append("Think deeply about this task before proceeding.")
+        # Check for obvious errors first
+        if return_code != 0:
+            if stderr:
+                return False, stderr
             else:
-                prompt_parts.append("Think about the best approach for this task.")
+                return False, "Command failed with non-zero exit code"
         
-        # Add main task
-        prompt_parts.append(f"Task: {command}")
+        # Handle JSON output format (used in print mode)
+        if execution_mode == "print" and stdout.strip().startswith('{'):
+            try:
+                import json
+                output_data = json.loads(stdout)
+                
+                # Extract the actual response content
+                if isinstance(output_data, dict):
+                    if 'content' in output_data:
+                        return True, output_data['content']
+                    elif 'response' in output_data:
+                        return True, output_data['response']
+                    elif 'message' in output_data:
+                        return True, output_data['message']
+                    else:
+                        # Return formatted JSON as fallback
+                        return True, json.dumps(output_data, indent=2)
+                else:
+                    return True, str(output_data)
+                    
+            except json.JSONDecodeError:
+                # Fall through to text parsing
+                pass
         
-        # Add context and task type
-        if hasattr(task, 'context') and task.context:
-            prompt_parts.append(f"Context: {task.context}")
+        # Handle text output (interactive mode or fallback)
+        if stdout.strip():
+            # Clean up the output by removing excessive whitespace and formatting
+            lines = stdout.split('\n')
+            cleaned_lines = []
+            
+            for line in lines:
+                # Skip empty lines and CLI formatting
+                if line.strip() and not line.startswith('Aider ') and not line.startswith('───'):
+                    cleaned_lines.append(line.strip())
+            
+            if cleaned_lines:
+                return True, '\n'.join(cleaned_lines)
+            else:
+                return True, stdout.strip()
         
-        prompt_parts.append(f"Task type: {task_type}")
-        
-        # Add task-specific instructions
-        if task_type == "explain":
-            prompt_parts.append("Analyze the codebase thoroughly and provide detailed insights.")
-        elif task_type == "refactor":
-            prompt_parts.append("Refactor the code while maintaining functionality. Consider architecture improvements.")
-        elif task_type == "debug":
-            prompt_parts.append("Identify and fix bugs systematically. Explain your debugging process.")
-        elif task_type == "document":
-            prompt_parts.append("Create comprehensive documentation that helps other developers.")
-        elif task_type == "implement":
-            prompt_parts.append("Think about system design, scalability, and maintainability.")
-        
-        # Add memory and project context
-        prompt_parts.append(f"Project directory: {self.project_root}")
-        if self.memory_initialized:
-            prompt_parts.append("Use the CLAUDE.md memory file for project-specific guidelines.")
-        
-        prompt_parts.append("Work within this project context and maintain consistency with existing patterns.")
-        
-        # Add session continuity for complex tasks
-        if self.session_id and task_type in ["refactor", "implement", "debug"]:
-            prompt_parts.append(f"Session ID: {self.session_id} (for potential follow-up tasks)")
-        
-        return "\n\n".join(prompt_parts)
-
-    async def _parse_claude_output(self, output: str, task: Task) -> Dict[str, Any]:
-        """Parse Claude Code's JSON output for enhanced metadata."""
-        try:
-            # Try to parse as JSON first
-            if output.startswith('{') and output.endswith('}'):
-                data = json.loads(output)
-                return {
-                    "output": data.get("content", output),
-                    "tools_used": data.get("tools_used", []),
-                    "files_modified": data.get("files_modified", []),
-                    "thinking_time": data.get("thinking_time"),
-                    "session_info": data.get("session_info")
-                }
-        except json.JSONDecodeError:
-            pass
-        
-        # Fallback to text parsing
-        return {
-            "output": output,
-            "tools_used": [],
-            "files_modified": [],
-            "thinking_time": None
-        }
+        # If we get here, there's no meaningful output
+        if stderr:
+            return False, stderr
+        else:
+            return False, "No output received from Claude Code"
     
     def get_supported_tasks(self) -> List[str]:
         """Get enhanced list of supported task types."""
