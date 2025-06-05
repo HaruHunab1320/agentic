@@ -8,9 +8,32 @@ Prerequisites
 
 Before you begin, ensure you have:
 
-* Python 3.9+ installed
-* Agentic installed (see :doc:`installation`)
-* Optional: API keys for AI providers (OpenAI, Anthropic)
+* **Python 3.9+** installed
+* **Aider** installed and configured (see :doc:`installation` for details)
+* **Claude Code** installed and authenticated (see :doc:`installation` for details)
+* **API keys** for your preferred AI provider:
+
+  - `Anthropic API Key <https://console.anthropic.com/>`_ (for Claude models)
+  - `OpenAI API Key <https://platform.openai.com/api-keys>`_ (for GPT models)
+  - `DeepSeek API Key <https://platform.deepseek.com/>`_ (for DeepSeek models)
+
+**Quick Prerequisites Setup**
+
+If you haven't set up the prerequisites yet:
+
+.. code-block:: bash
+
+   # 1. Install Aider
+   python -m pip install aider-install
+   aider-install
+   
+   # 2. Install Claude Code (requires Node.js)
+   npm install -g @anthropic-ai/claude-code
+   
+   # 3. Install Agentic
+   pip install agentic
+
+For complete installation instructions, see the :doc:`installation` guide.
 
 First Steps
 -----------

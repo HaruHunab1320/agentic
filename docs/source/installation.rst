@@ -1,6 +1,104 @@
 Installation Guide
 ==================
 
+Prerequisites
+-------------
+
+Before installing Agentic, you need to set up the underlying AI coding tools that power the platform:
+
+**Required Tools**
+
+Agentic is built on top of two powerful AI coding tools:
+
+1. **Aider** - AI pair programming in your terminal
+2. **Claude Code** - Anthropic's agentic coding tool
+
+Installing Aider
+~~~~~~~~~~~~~~~~~
+
+Aider is the primary coding agent used by the Agentic platform. Install it using the recommended method:
+
+.. code-block:: bash
+
+   # Install aider-install package
+   python -m pip install aider-install
+   
+   # Run the installer
+   aider-install
+
+This will install aider in its own separate python environment. If needed, aider-install will also install a separate version of python 3.12 to use with aider.
+
+**Alternative installation methods:**
+
+.. code-block:: bash
+
+   # Using uv (if you have uv installed)
+   uv tool install --force --python python3.12 --with pip aider-chat@latest
+   
+   # Using pipx
+   pipx install aider-chat
+
+For more installation options, see the `Aider Installation Guide <https://aider.chat/docs/install.html>`_.
+
+Installing Claude Code
+~~~~~~~~~~~~~~~~~~~~~~
+
+Claude Code is Anthropic's agentic coding tool that integrates with the Agentic platform:
+
+.. code-block:: bash
+
+   # Install Claude Code globally via npm
+   npm install -g @anthropic-ai/claude-code
+
+**Note:** You'll need Node.js and npm installed on your system. Visit `nodejs.org <https://nodejs.org/>`_ to install Node.js.
+
+For more information, see the `Claude Code Overview <https://docs.anthropic.com/en/docs/claude-code/overview>`_.
+
+Configuring Authentication
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Aider Configuration**
+
+Aider can be configured to use various AI models and providers. Set up your preferred provider:
+
+.. code-block:: bash
+
+   # For Claude 3.5 Sonnet (Anthropic)
+   aider --model sonnet --api-key anthropic=<your-anthropic-key>
+   
+   # For GPT-4 (OpenAI)  
+   aider --model gpt-4 --api-key openai=<your-openai-key>
+   
+   # For DeepSeek
+   aider --model deepseek --api-key deepseek=<your-deepseek-key>
+
+You can also set API keys as environment variables:
+
+.. code-block:: bash
+
+   export ANTHROPIC_API_KEY="your-anthropic-key"
+   export OPENAI_API_KEY="your-openai-key"
+   export DEEPSEEK_API_KEY="your-deepseek-key"
+
+For complete configuration options, see the `Aider Configuration Guide <https://aider.chat/docs/config.html>`_.
+
+**Claude Code Authentication**
+
+Follow the Claude Code documentation for authentication setup:
+
+.. code-block:: bash
+
+   # Start Claude Code and follow the authentication prompts
+   claude
+
+The tool will guide you through the authentication process. For detailed instructions, see the `Claude Code Getting Started Guide <https://docs.anthropic.com/en/docs/claude-code/getting-started>`_.
+
+**Getting API Keys**
+
+- **Anthropic (Claude)**: Visit `console.anthropic.com <https://console.anthropic.com/>`_
+- **OpenAI (GPT)**: Visit `platform.openai.com <https://platform.openai.com/api-keys>`_
+- **DeepSeek**: Visit `platform.deepseek.com <https://platform.deepseek.com/>`_
+
 System Requirements
 -------------------
 
@@ -15,6 +113,11 @@ System Requirements
 **Hardware Requirements**
     * Minimum: 2GB RAM, 1GB disk space
     * Recommended: 4GB RAM, 2GB disk space
+
+**Additional Requirements**
+    * Node.js 16+ (for Claude Code)
+    * Git (for version control integration)
+    * Terminal with ANSI color support (recommended)
 
 Installation Methods
 --------------------
