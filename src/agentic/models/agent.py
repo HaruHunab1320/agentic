@@ -48,6 +48,13 @@ class AgentCapability(BaseModel):
     reasoning_capability: bool = Field(default=False, description="Whether agent has advanced reasoning")
     file_editing_capability: bool = Field(default=True, description="Whether agent can edit files")
     code_execution_capability: bool = Field(default=False, description="Whether agent can execute code")
+    
+    # NEW: Enhanced capabilities
+    memory_capability: bool = Field(default=False, description="Whether agent supports memory/context persistence")
+    session_persistence: bool = Field(default=False, description="Whether agent supports session persistence")
+    interactive_capability: bool = Field(default=False, description="Whether agent can handle interactive scenarios")
+    inter_agent_communication: bool = Field(default=False, description="Whether agent supports inter-agent communication")
+    git_integration: bool = Field(default=False, description="Whether agent has git integration capabilities")
 
 
 class AgentConfig(BaseModel):
@@ -170,4 +177,24 @@ class Agent(ABC):
     @property
     def is_available(self) -> bool:
         """Check if agent is available for new tasks"""
-        return self.session is not None and self.session.is_available 
+        return self.session is not None and self.session.is_available
+    
+    @property
+    def agent_type(self) -> AgentType:
+        """Get agent type from config (compatibility property)"""
+        return self.config.agent_type
+    
+    @property
+    def focus_areas(self) -> List[str]:
+        """Get focus areas from config (compatibility property)"""
+        return self.config.focus_areas
+    
+    @property
+    def name(self) -> str:
+        """Get agent name from config (compatibility property)"""
+        return self.config.name
+    
+    @property
+    def workspace_path(self) -> Path:
+        """Get workspace path from config (compatibility property)"""
+        return self.config.workspace_path 

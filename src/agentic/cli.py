@@ -131,8 +131,10 @@ def spawn(ctx: click.Context, agent_type: str, model: str) -> None:
 @click.option("--format", "output_format", 
               type=click.Choice(["table", "json", "simple"]), 
               default="table", help="Output format")
+@click.option('--watch', '-w', is_flag=True, help='Watch mode - continuously update status')
+@click.option('--interval', '-i', default=2, help='Update interval in seconds for watch mode')
 @click.pass_context
-def status(ctx: click.Context, output_format: str):
+def status(ctx: click.Context, output_format: str, watch: bool, interval: int):
     """Show status of all agents"""
     import asyncio
     from agentic.models.config import AgenticConfig
@@ -147,22 +149,30 @@ def status(ctx: click.Context, output_format: str):
         # Initialize orchestrator
         orchestrator = Orchestrator(config)
         
-        async def async_status():
-            # Try to get status (may need initialization)
+        async def display_status():
+            """Display current status"""
             try:
                 if not orchestrator.is_ready:
-                    console.print("[dim]Orchestrator not initialized. Run 'agentic init' first.[/dim]")
-                    return
+                    await orchestrator.initialize()
                 
                 status = await orchestrator.get_agent_status()
                 health = await orchestrator.health_check()
+                
+                # Get background tasks if available
+                background_tasks = {}
+                try:
+                    background_tasks = orchestrator.get_all_background_tasks()
+                except:
+                    pass
                 
                 if output_format == "json":
                     import json
                     combined_status = {
                         "agents": status,
                         "health": health,
-                        "total_agents": len(status)
+                        "background_tasks": background_tasks,
+                        "total_agents": len(status),
+                        "timestamp": datetime.utcnow().isoformat()
                     }
                     console.print(json.dumps(combined_status, indent=2))
                     
@@ -173,15 +183,25 @@ def status(ctx: click.Context, output_format: str):
                         agent_type = info.get('type', 'unknown')
                         status_str = info.get('status', 'unknown')
                         console.print(f"  {name} ({agent_type}): {status_str}")
+                    
+                    if background_tasks:
+                        console.print(f"Background tasks: {len(background_tasks)}")
                         
                 else:  # table format
                     from rich.table import Table
+                    from datetime import datetime
                     
-                    table = Table(title="🤖 Agent Status")
+                    # Clear screen in watch mode
+                    if watch:
+                        console.clear()
+                    
+                    # Agent status table
+                    table = Table(title=f"🤖 Agent Status - {datetime.now().strftime('%H:%M:%S')}")
                     table.add_column("Name", style="cyan")
                     table.add_column("Type", style="magenta")
                     table.add_column("Status", style="green")
                     table.add_column("Focus Areas", style="yellow")
+                    table.add_column("Last Activity", style="dim")
                     table.add_column("Health", style="red")
                     
                     for agent_id, info in status.items():
@@ -189,11 +209,35 @@ def status(ctx: click.Context, output_format: str):
                         agent_type = info.get('type', 'unknown')
                         status_str = info.get('status', 'unknown')
                         focus_areas = ', '.join(info.get('focus_areas', []))
+                        last_activity = info.get('last_activity', 'Never')
+                        if isinstance(last_activity, str) and last_activity != 'Never':
+                            try:
+                                from datetime import datetime
+                                dt = datetime.fromisoformat(last_activity.replace('Z', '+00:00'))
+                                last_activity = dt.strftime('%H:%M:%S')
+                            except:
+                                pass
                         is_healthy = "✅" if health.get(agent_id, False) else "❌"
                         
-                        table.add_row(name, agent_type, status_str, focus_areas, is_healthy)
+                        table.add_row(name, agent_type, status_str, focus_areas, str(last_activity), is_healthy)
                     
                     console.print(table)
+                    
+                    # Background tasks table
+                    if background_tasks:
+                        bg_table = Table(title="🔄 Background Tasks")
+                        bg_table.add_column("Task ID", style="cyan", width=36)
+                        bg_table.add_column("Status", style="yellow")
+                        bg_table.add_column("Done", style="green")
+                        
+                        for task_id, task_info in background_tasks.items():
+                            bg_table.add_row(
+                                task_id,
+                                task_info.get('status', 'unknown'),
+                                "✅" if task_info.get('done', False) else "⏳"
+                            )
+                        
+                        console.print(bg_table)
                     
                     # Overall health summary
                     healthy_count = sum(1 for h in health.values() if h)
@@ -202,10 +246,24 @@ def status(ctx: click.Context, output_format: str):
                         health_percentage = (healthy_count / total_count) * 100
                         health_color = "green" if health_percentage >= 80 else "yellow" if health_percentage >= 50 else "red"
                         console.print(f"\n[{health_color}]Overall Health: {healthy_count}/{total_count} agents healthy ({health_percentage:.1f}%)[/{health_color}]")
+                    
+                    if watch:
+                        console.print(f"\n[dim]Press Ctrl+C to exit watch mode. Refreshing every {interval}s...[/dim]")
                 
             except Exception as e:
                 logger.error(f"Status check failed: {e}")
                 console.print(f"[red]❌ Failed to get status: {e}[/red]")
+        
+        async def async_status():
+            if watch:
+                try:
+                    while True:
+                        await display_status()
+                        await asyncio.sleep(interval)
+                except KeyboardInterrupt:
+                    console.print("\n[yellow]👋 Exiting watch mode[/yellow]")
+            else:
+                await display_status()
         
         asyncio.run(async_status())
         
@@ -851,6 +909,310 @@ async def _stop_agents(agent_name: Optional[str], debug: bool) -> None:
         console.print("[yellow]🛑 Stopping all agents...[/yellow]")
         # TODO: Implement stopping all agents
         console.print("[dim]No active agents to stop[/dim]")
+
+
+@cli.command("exec-bg")
+@click.argument("command", nargs=-1, required=True)
+@click.option("--context", help="Additional context for the command")
+@click.pass_context
+def exec_bg(ctx: click.Context, command: tuple, context: str):
+    """Execute a command in the background without blocking"""
+    
+    logger = ctx.obj['logger']
+    
+    # Combine command parts into single string
+    command_str = " ".join(command)
+    
+    console.print(f"[bold blue]🎯 Starting background execution: {command_str}[/bold blue]")
+    if context:
+        console.print(f"[dim]Context: {context}[/dim]")
+    
+    try:
+        # Load configuration
+        config = AgenticConfig.load_or_create(Path.cwd())
+        
+        # Initialize orchestrator
+        orchestrator = Orchestrator(config)
+        
+        async def async_exec_bg():
+            # Initialize orchestrator if needed
+            if not orchestrator.is_ready:
+                console.print("[yellow]⚠️ Orchestrator not initialized. Initializing now...[/yellow]")
+                success = await orchestrator.initialize()
+                if not success:
+                    console.print("[red]❌ Failed to initialize orchestrator[/red]")
+                    return
+            
+            # Start background execution
+            try:
+                task_id = await orchestrator.execute_background_command(
+                    command=command_str,
+                    context={"context": context} if context else None
+                )
+                
+                console.print(f"[bold green]✅ Background task started![/bold green]")
+                console.print(f"[dim]Task ID: {task_id}[/dim]")
+                console.print(f"[dim]Use 'agentic bg-status {task_id}' to check progress[/dim]")
+                console.print(f"[dim]Use 'agentic bg-list' to see all background tasks[/dim]")
+                
+            except Exception as e:
+                logger.error(f"Background command execution failed: {e}")
+                console.print(f"[bold red]❌ Background execution failed: {e}[/bold red]")
+        
+        asyncio.run(async_exec_bg())
+        
+    except Exception as e:
+        logger.error(f"Background exec command failed: {e}")
+        console.print(f"[bold red]❌ Error: {e}[/bold red]")
+        raise click.ClickException(str(e))
+
+
+@cli.command("bg-status")
+@click.argument("task_id", required=False)
+@click.pass_context
+def bg_status(ctx: click.Context, task_id: Optional[str]):
+    """Show status of background tasks"""
+    
+    logger = ctx.obj['logger']
+    
+    try:
+        # Load configuration
+        config = AgenticConfig.load_or_create(Path.cwd())
+        
+        # Initialize orchestrator
+        orchestrator = Orchestrator(config)
+        
+        async def async_bg_status():
+            # Initialize orchestrator if needed
+            if not orchestrator.is_ready:
+                success = await orchestrator.initialize()
+                if not success:
+                    console.print("[red]❌ Failed to initialize orchestrator[/red]")
+                    return
+            
+            if task_id:
+                # Show specific task status
+                status = orchestrator.get_background_task_status(task_id)
+                if status:
+                    console.print(f"[bold blue]📋 Task Status: {task_id}[/bold blue]")
+                    console.print(f"Status: [yellow]{status['status']}[/yellow]")
+                    console.print(f"Done: {status['done']}")
+                    if 'result' in status:
+                        console.print(f"Result: {status['result']}")
+                else:
+                    console.print(f"[red]❌ Task not found: {task_id}[/red]")
+            else:
+                # Show all background tasks
+                all_tasks = orchestrator.get_all_background_tasks()
+                if not all_tasks:
+                    console.print("[yellow]No background tasks found[/yellow]")
+                    return
+                
+                table = Table(title="🔄 Background Tasks")
+                table.add_column("Task ID", style="cyan", width=36)
+                table.add_column("Status", style="yellow", width=12)
+                table.add_column("Done", style="green", width=6)
+                table.add_column("Completed At", style="dim", width=20)
+                
+                for tid, task_status in all_tasks.items():
+                    completed_at = task_status.get('completed_at', 'N/A')
+                    if isinstance(completed_at, str) and completed_at != 'N/A':
+                        try:
+                            from datetime import datetime
+                            completed_at = datetime.fromisoformat(completed_at).strftime('%Y-%m-%d %H:%M:%S')
+                        except:
+                            pass
+                    
+                    table.add_row(
+                        tid,
+                        task_status['status'],
+                        "✅" if task_status['done'] else "⏳",
+                        str(completed_at)
+                    )
+                
+                console.print(table)
+        
+        asyncio.run(async_bg_status())
+        
+    except Exception as e:
+        logger.error(f"Background status command failed: {e}")
+        console.print(f"[bold red]❌ Error: {e}[/bold red]")
+        raise click.ClickException(str(e))
+
+
+@cli.command("bg-list")
+@click.pass_context
+def bg_list(ctx: click.Context):
+    """List all background tasks"""
+    # This is just an alias for bg-status with no task_id
+    ctx.invoke(bg_status, task_id=None)
+
+
+@cli.command("bg-cancel")
+@click.argument("task_id")
+@click.pass_context
+def bg_cancel(ctx: click.Context, task_id: str):
+    """Cancel a running background task"""
+    
+    logger = ctx.obj['logger']
+    
+    try:
+        # Load configuration
+        config = AgenticConfig.load_or_create(Path.cwd())
+        
+        # Initialize orchestrator
+        orchestrator = Orchestrator(config)
+        
+        async def async_bg_cancel():
+            # Initialize orchestrator if needed
+            if not orchestrator.is_ready:
+                success = await orchestrator.initialize()
+                if not success:
+                    console.print("[red]❌ Failed to initialize orchestrator[/red]")
+                    return
+            
+            # Cancel the task
+            success = await orchestrator.cancel_background_task(task_id)
+            if success:
+                console.print(f"[green]✅ Cancelled background task: {task_id}[/green]")
+            else:
+                console.print(f"[yellow]⚠️ Task not found or already completed: {task_id}[/yellow]")
+        
+        asyncio.run(async_bg_cancel())
+        
+    except Exception as e:
+        logger.error(f"Background cancel command failed: {e}")
+        console.print(f"[bold red]❌ Error: {e}[/bold red]")
+        raise click.ClickException(str(e))
+
+
+@cli.command("exec-interactive")
+@click.argument("command", nargs=-1, required=True)
+@click.option("--context", help="Additional context for the command")
+@click.pass_context
+def exec_interactive(ctx: click.Context, command: tuple, context: str):
+    """Execute a command with interactive capabilities (handles agent questions)"""
+    
+    logger = ctx.obj['logger']
+    
+    # Combine command parts into single string
+    command_str = " ".join(command)
+    
+    console.print(f"[bold blue]🤖 Interactive execution: {command_str}[/bold blue]")
+    console.print("[dim]This mode allows agents to ask questions and request input[/dim]")
+    if context:
+        console.print(f"[dim]Context: {context}[/dim]")
+    
+    try:
+        # Load configuration
+        config = AgenticConfig.load_or_create(Path.cwd())
+        
+        # Initialize orchestrator
+        orchestrator = Orchestrator(config)
+        
+        async def input_handler(question: str) -> str:
+            """Handle input requests from agents"""
+            console.print(f"\n[yellow]🤔 Agent question:[/yellow] {question}")
+            
+            # Use click to get user input
+            response = click.prompt("Your response", type=str, default="")
+            return response
+        
+        async def async_exec_interactive():
+            # Initialize orchestrator if needed
+            if not orchestrator.is_ready:
+                console.print("[yellow]⚠️ Orchestrator not initialized. Initializing now...[/yellow]")
+                success = await orchestrator.initialize()
+                if not success:
+                    console.print("[red]❌ Failed to initialize orchestrator[/red]")
+                    return
+            
+            # Execute with interactive capabilities
+            try:
+                result = await orchestrator.execute_interactive_command(
+                    command=command_str,
+                    input_handler=input_handler
+                )
+                
+                if result and result.status == "completed":
+                    console.print("[bold green]✅ Interactive command executed successfully![/bold green]")
+                    
+                    # Display results
+                    if result.output:
+                        console.print(f"\n[bold]Output:[/bold]\n{result.output}")
+                    
+                    if result.agent_id:
+                        console.print(f"\n[dim]Agent used: {result.agent_id}[/dim]")
+                        
+                else:
+                    error_msg = result.error if result and result.error else 'No result returned or task failed'
+                    console.print(f"[bold red]❌ Command failed: {error_msg}[/bold red]")
+                    
+            except Exception as e:
+                logger.error(f"Interactive command execution failed: {e}")
+                console.print(f"[bold red]❌ Execution failed: {e}[/bold red]")
+        
+        asyncio.run(async_exec_interactive())
+        
+    except Exception as e:
+        logger.error(f"Interactive exec command failed: {e}")
+        console.print(f"[bold red]❌ Error: {e}[/bold red]")
+        raise click.ClickException(str(e))
+
+
+@cli.command("comm-status")
+@click.pass_context
+def comm_status(ctx: click.Context):
+    """Show inter-agent communication status"""
+    
+    logger = ctx.obj['logger']
+    
+    try:
+        # Load configuration
+        config = AgenticConfig.load_or_create(Path.cwd())
+        
+        # Initialize orchestrator
+        orchestrator = Orchestrator(config)
+        
+        async def async_comm_status():
+            # Initialize orchestrator if needed
+            if not orchestrator.is_ready:
+                success = await orchestrator.initialize()
+                if not success:
+                    console.print("[red]❌ Failed to initialize orchestrator[/red]")
+                    return
+            
+            # Get communication stats
+            stats = orchestrator.get_communication_stats()
+            shared_context = await orchestrator.get_shared_context()
+            
+            console.print("[bold blue]🔗 Inter-Agent Communication Status[/bold blue]")
+            
+            # Communication stats table
+            table = Table(title="Communication Hub Stats")
+            table.add_column("Metric", style="cyan")
+            table.add_column("Value", style="green")
+            
+            table.add_row("Active Agents", str(stats['active_agents']))
+            table.add_row("Agent Names", ", ".join(stats['agent_names']) if stats['agent_names'] else "None")
+            table.add_row("Memory File Exists", "✅" if stats['memory_file_exists'] else "❌")
+            table.add_row("Memory File Path", stats['memory_file_path'])
+            
+            console.print(table)
+            
+            # Shared context
+            if shared_context and shared_context.strip():
+                console.print(f"\n[bold]Shared Context:[/bold]")
+                console.print(shared_context[:500] + "..." if len(shared_context) > 500 else shared_context)
+            else:
+                console.print(f"\n[dim]No shared context available[/dim]")
+        
+        asyncio.run(async_comm_status())
+        
+    except Exception as e:
+        logger.error(f"Communication status command failed: {e}")
+        console.print(f"[bold red]❌ Error: {e}[/bold red]")
+        raise click.ClickException(str(e))
 
 
 @cli.group()

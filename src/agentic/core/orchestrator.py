@@ -15,6 +15,7 @@ from agentic.core.coordination_engine import CoordinationEngine, ExecutionResult
 from agentic.core.intent_classifier import IntentClassifier
 from agentic.core.project_analyzer import ProjectAnalyzer
 from agentic.core.shared_memory import SharedMemory
+from agentic.core.inter_agent_communication import InterAgentCommunicationHub
 from agentic.models.agent import AgentSession, AgentType
 from agentic.models.config import AgenticConfig
 from agentic.models.project import ProjectStructure
@@ -41,6 +42,9 @@ class Orchestrator(LoggerMixin):
         self.intent_classifier = IntentClassifier()
         self.command_router = CommandRouter(self.agent_registry)
         self.coordination_engine = CoordinationEngine(self.agent_registry, self.shared_memory)
+        
+        # NEW: Inter-agent communication system
+        self.communication_hub = InterAgentCommunicationHub(workspace_path=config.workspace_path)
         
         # State
         self._project_structure: Optional[ProjectStructure] = None
@@ -214,13 +218,13 @@ class Orchestrator(LoggerMixin):
         agent_status = {}
         all_agents = self.agent_registry.get_all_agents()
         
-        for agent in all_agents:
-            agent_status[agent.id] = {
-                'name': agent.name,
-                'type': agent.agent_type.value if hasattr(agent.agent_type, 'value') else str(agent.agent_type),
-                'status': 'active',  # Default status
-                'focus_areas': getattr(agent, 'focus_areas', []),
-                'last_activity': None  # Could be enhanced later
+        for session in all_agents:
+            agent_status[session.id] = {
+                'name': session.agent_config.name,
+                'type': session.agent_config.agent_type.value if hasattr(session.agent_config.agent_type, 'value') else str(session.agent_config.agent_type),
+                'status': session.status,
+                'focus_areas': session.agent_config.focus_areas,
+                'last_activity': session.last_activity.isoformat() if session.last_activity else None
             }
         
         return agent_status
@@ -233,9 +237,9 @@ class Orchestrator(LoggerMixin):
         health_status = {}
         all_agents = self.agent_registry.get_all_agents()
         
-        for agent in all_agents:
+        for session in all_agents:
             # Basic health check - could be enhanced with actual health status
-            health_status[agent.id] = True
+            health_status[session.id] = session.status == "active"
         
         return health_status
     
@@ -288,13 +292,30 @@ class Orchestrator(LoggerMixin):
         return activity[:limit]
     
     async def spawn_agent_session(self, agent_type: str, config: Optional[Dict[str, Any]] = None) -> AgentSession:
-        """Spawn a new agent session"""
+        """Spawn a new agent session or reuse an existing one"""
         if not self._is_initialized:
             raise RuntimeError("Orchestrator not initialized. Call initialize() first.")
         
         try:
-            session = await self.agent_registry.spawn_agent(agent_type, config or {})
-            self.logger.info(f"Spawned new {agent_type} agent: {session.id}")
+            from agentic.models.agent import AgentConfig, AgentType
+            
+            # Convert string to AgentType if needed
+            if isinstance(agent_type, str):
+                agent_type = AgentType(agent_type)
+            
+            # Create agent config
+            agent_config = AgentConfig(
+                agent_type=agent_type,
+                name=f"{agent_type.value.lower()}_session",
+                workspace_path=self.config.workspace_path,
+                focus_areas=config.get('focus_areas', []) if config else [],
+                ai_model_config=config.get('ai_model_config', {"model": self.config.primary_model}) if config else {"model": self.config.primary_model},
+                max_tokens=config.get('max_tokens', self.config.max_tokens) if config else self.config.max_tokens,
+                temperature=config.get('temperature', self.config.temperature) if config else self.config.temperature
+            )
+            
+            session = await self.agent_registry.get_or_spawn_agent(agent_config)
+            self.logger.info(f"Spawned/reused {agent_type.value} agent: {session.id}")
             return session
             
         except Exception as e:
@@ -362,15 +383,153 @@ class Orchestrator(LoggerMixin):
                 self.logger.error(f"Background maintenance error: {e}")
                 await asyncio.sleep(60)  # Wait before retrying
     
+    async def execute_background_command(self, command: str, context: Optional[Dict[str, Any]] = None) -> str:
+        """Execute a command in the background without blocking"""
+        if not self._is_initialized:
+            raise RuntimeError("Orchestrator not initialized. Call initialize() first.")
+        
+        self.logger.info(f"Starting background execution: {command[:50]}...")
+        
+        # Use coordination engine for background execution
+        task_id = await self.coordination_engine.execute_background_task(command, context)
+        
+        return task_id
+    
+    def get_background_task_status(self, task_id: str) -> Optional[Dict[str, Any]]:
+        """Get status of a background task"""
+        return self.coordination_engine.get_background_task_status(task_id)
+    
+    def get_all_background_tasks(self) -> Dict[str, Dict[str, Any]]:
+        """Get status of all background tasks"""
+        return self.coordination_engine.get_all_background_tasks()
+    
+    async def cancel_background_task(self, task_id: str) -> bool:
+        """Cancel a running background task"""
+        return await self.coordination_engine.cancel_background_task(task_id)
+    
+    # NEW: Inter-agent communication methods
+    async def send_inter_agent_message(
+        self,
+        from_agent_id: str,
+        message_type: str,
+        content: str,
+        to_agent_id: Optional[str] = None
+    ) -> str:
+        """Send a message between agents"""
+        return await self.communication_hub.send_message(
+            from_agent_id=from_agent_id,
+            message_type=message_type,
+            content=content,
+            to_agent_id=to_agent_id
+        )
+    
+    def get_communication_stats(self) -> Dict[str, Any]:
+        """Get inter-agent communication statistics"""
+        return self.communication_hub.get_communication_stats()
+    
+    async def get_shared_context(self) -> str:
+        """Get current shared context for agents"""
+        return await self.communication_hub.get_shared_context()
+    
+    async def execute_interactive_command(self, command: str, input_handler=None) -> TaskResult:
+        """Execute a command with interactive capabilities"""
+        if not self._is_initialized:
+            raise RuntimeError("Orchestrator not initialized. Call initialize() first.")
+        
+        self.logger.info(f"Executing interactive command: {command[:50]}...")
+        
+        try:
+            # Classify intent
+            intent = await self.intent_classifier.analyze_intent(command)
+            self.logger.debug(f"Classified intent: {intent.task_type}")
+            
+            # Create task from intent
+            task = Task.from_intent(intent, command)
+            
+            # Check if we have agents, if not spawn one
+            available_agents = self.agent_registry.get_available_agents()
+            if not available_agents:
+                self.logger.info("No agents available, spawning agent for interactive task...")
+                try:
+                    await self._auto_spawn_agent(intent)
+                except Exception as e:
+                    self.logger.error(f"Failed to auto-spawn agent: {e}")
+                    return TaskResult(
+                        task_id=task.id,
+                        agent_id="none",
+                        status="failed",
+                        output="",
+                        error=f"No agents available and failed to spawn: {e}"
+                    )
+            
+            # Route to appropriate agent
+            routing_decision = await self.command_router.route_command(command, {})
+            
+            if not routing_decision.primary_agent:
+                return TaskResult(
+                    task_id=task.id,
+                    agent_id="none",
+                    status="failed",
+                    output="",
+                    error="No suitable agent found for command"
+                )
+            
+            # Get agent instance
+            best_agent = routing_decision.primary_agent
+            agent_instance = self.agent_registry.get_agent_by_id(best_agent.id)
+            
+            if not agent_instance:
+                return TaskResult(
+                    task_id=task.id,
+                    agent_id=best_agent.id,
+                    status="failed",
+                    output="",
+                    error="Agent instance not found"
+                )
+            
+            # Set up input handler for interactive execution
+            if hasattr(agent_instance, 'set_input_handler') and input_handler:
+                agent_instance.set_input_handler(input_handler)
+            
+            # Register task and execute
+            await self.shared_memory.register_task(task)
+            
+            # Use interactive execution if agent supports it
+            if hasattr(agent_instance, 'handle_interactive_input'):
+                result = await agent_instance.handle_interactive_input(task)
+            else:
+                result = await agent_instance.execute_task(task)
+            
+            await self.shared_memory.complete_task(task.id, result)
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"Interactive command execution failed: {e}")
+            return TaskResult(
+                task_id=task.id if 'task' in locals() else "unknown",
+                agent_id="orchestrator",
+                status="failed",
+                output="",
+                error=str(e)
+            )
+
     async def shutdown(self) -> None:
         """Gracefully shutdown the orchestrator"""
         self.logger.info("Shutting down orchestrator...")
         
         try:
+            # Cancel all background tasks
+            background_tasks = self.get_all_background_tasks()
+            for task_id in background_tasks:
+                if not background_tasks[task_id].get("done", True):
+                    await self.cancel_background_task(task_id)
+                    self.logger.info(f"Cancelled background task {task_id}")
+            
             # Stop all agents
-            active_agents = self.agent_registry.get_all_agents()
-            for agent in active_agents:
-                await self.agent_registry.stop_agent(agent.id)
+            active_sessions = self.agent_registry.get_all_agents()
+            for session in active_sessions:
+                await self.agent_registry.stop_agent(session.id)
             
             # Cancel any active executions
             active_executions = self.coordination_engine.get_active_executions()
@@ -405,9 +564,13 @@ class Orchestrator(LoggerMixin):
             temperature=self.config.temperature
         )
         
-        # Spawn the agent
-        session = await self.agent_registry.spawn_agent(config)
-        self.logger.info(f"Auto-spawned {agent_type.value} agent: {session.id}")
+        # Get existing or spawn new agent (enables session persistence)
+        session = await self.agent_registry.get_or_spawn_agent(config)
+        
+        # Register agent with communication hub
+        self.communication_hub.register_agent(session)
+        
+        self.logger.info(f"Auto-spawned/reused {agent_type.value} agent: {session.id}")
 
     def _determine_optimal_agent(self, intent, command_lower: str) -> tuple:
         """Determine the optimal agent type based on task characteristics"""

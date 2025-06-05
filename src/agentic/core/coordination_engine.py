@@ -69,6 +69,7 @@ class CoordinationEngine(LoggerMixin):
         self.agent_registry = agent_registry
         self.shared_memory = shared_memory
         self.active_executions: Dict[str, ExecutionContext] = {}
+        self.background_tasks: Dict[str, asyncio.Task] = {}  # For background task execution
     
     async def execute_coordinated_tasks(self, tasks: List[Task], 
                                        coordination_plan: Optional[List[List[str]]] = None) -> ExecutionResult:
@@ -449,4 +450,172 @@ class CoordinationEngine(LoggerMixin):
                 "duration": context.total_duration,
                 "started_at": context.started_at
             }
-        return None 
+        return None
+    
+    async def execute_background_task(self, command: str, context: Optional[Dict[str, Any]] = None) -> str:
+        """Execute a task in the background without blocking the CLI"""
+        from agentic.core.intent_classifier import IntentClassifier
+        from agentic.models.task import Task
+        
+        # Create a task for the command
+        intent_classifier = IntentClassifier()
+        intent = await intent_classifier.analyze_intent(command)
+        task = Task.from_intent(intent, command)
+        
+        # Create background task
+        background_task = asyncio.create_task(
+            self._execute_background_task_internal(task, context or {})
+        )
+        
+        # Store the background task
+        self.background_tasks[task.id] = background_task
+        
+        self.logger.info(f"Started background task {task.id}: {command[:50]}...")
+        return task.id
+    
+    async def _execute_background_task_internal(self, task: Task, context: Dict[str, Any]) -> TaskResult:
+        """Internal method to execute a background task"""
+        try:
+            # Register task in shared memory
+            await self.shared_memory.register_task(task)
+            
+            # Find or spawn an appropriate agent
+            routing_decision = await self._route_task_to_agent(task)
+            if not routing_decision:
+                raise RuntimeError("No suitable agent found for background task")
+            
+            agent_instance = self.agent_registry.get_agent_by_id(routing_decision.id)
+            if not agent_instance:
+                raise RuntimeError("Agent instance not found")
+            
+            # Mark agent as busy
+            routing_decision.mark_busy(task.id)
+            
+            # Execute the task with no timeout
+            self.logger.info(f"Background task {task.id} starting execution...")
+            result = await agent_instance.execute_task(task)
+            
+            # Mark task as complete
+            await self.shared_memory.complete_task(task.id, result)
+            
+            # Mark agent as idle
+            routing_decision.mark_idle()
+            
+            self.logger.info(f"Background task {task.id} completed with status: {result.status}")
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"Background task {task.id} failed: {e}")
+            error_result = TaskResult(
+                task_id=task.id,
+                status="failed",
+                error=str(e),
+                agent_id="background"
+            )
+            await self.shared_memory.complete_task(task.id, error_result)
+            return error_result
+        finally:
+            # Clean up the background task reference
+            if task.id in self.background_tasks:
+                del self.background_tasks[task.id]
+    
+    async def _route_task_to_agent(self, task: Task) -> Optional[AgentSession]:
+        """Route a task to an available agent"""
+        from agentic.core.command_router import CommandRouter
+        
+        # Use the command router to find the best agent
+        command_router = CommandRouter(self.agent_registry)
+        routing_decision = await command_router.route_command(task.command, {})
+        
+        if routing_decision.primary_agent:
+            return routing_decision.primary_agent
+        
+        # If no agent available, try to spawn one
+        try:
+            # Try to determine agent type from task
+            from agentic.models.agent import AgentConfig, AgentType
+            
+            # Simple heuristic - could be improved
+            if any(keyword in task.command.lower() for keyword in ['react', 'frontend', 'ui', 'component']):
+                agent_type = AgentType.AIDER_FRONTEND
+                focus_areas = ["frontend", "ui", "components"]
+            elif any(keyword in task.command.lower() for keyword in ['test', 'testing', 'unittest']):
+                agent_type = AgentType.AIDER_TESTING
+                focus_areas = ["testing", "qa"]
+            else:
+                agent_type = AgentType.AIDER_BACKEND
+                focus_areas = ["backend", "api", "database"]
+            
+            config = AgentConfig(
+                agent_type=agent_type,
+                name=f"bg_{agent_type.value}",
+                workspace_path=self.agent_registry.workspace_path,
+                focus_areas=focus_areas,
+                ai_model_config={"model": "gemini-2.5-pro"}
+            )
+            
+            session = await self.agent_registry.get_or_spawn_agent(config)
+            return session
+            
+        except Exception as e:
+            self.logger.error(f"Failed to spawn agent for background task: {e}")
+            return None
+    
+    def get_background_task_status(self, task_id: str) -> Optional[Dict[str, Any]]:
+        """Get status of a background task"""
+        if task_id in self.background_tasks:
+            bg_task = self.background_tasks[task_id]
+            return {
+                "task_id": task_id,
+                "status": "running" if not bg_task.done() else "completed",
+                "done": bg_task.done(),
+                "cancelled": bg_task.cancelled() if hasattr(bg_task, 'cancelled') else False
+            }
+        
+        # Check shared memory for completed tasks
+        task_progress = self.shared_memory.get_task_progress(task_id)
+        if task_progress:
+            return {
+                "task_id": task_id,
+                "status": task_progress.get("status", "unknown"),
+                "done": task_progress.get("status") in ["completed", "failed"],
+                "result": task_progress.get("result")
+            }
+        
+        return None
+    
+    def get_all_background_tasks(self) -> Dict[str, Dict[str, Any]]:
+        """Get status of all background tasks"""
+        statuses = {}
+        
+        # Active background tasks
+        for task_id in self.background_tasks:
+            status = self.get_background_task_status(task_id)
+            if status:
+                statuses[task_id] = status
+        
+        # Recent completed tasks from shared memory
+        try:
+            task_progress = self.shared_memory.get_all_task_progress()
+            for task_id, progress in task_progress.items():
+                if task_id not in statuses:  # Don't overwrite active tasks
+                    statuses[task_id] = {
+                        "task_id": task_id,
+                        "status": progress.get("status", "unknown"),
+                        "done": True,
+                        "completed_at": progress.get("completed_at")
+                    }
+        except Exception:
+            pass  # Shared memory might not have this method yet
+        
+        return statuses
+    
+    async def cancel_background_task(self, task_id: str) -> bool:
+        """Cancel a running background task"""
+        if task_id in self.background_tasks:
+            bg_task = self.background_tasks[task_id]
+            if not bg_task.done():
+                bg_task.cancel()
+                self.logger.info(f"Cancelled background task {task_id}")
+                return True
+        return False 

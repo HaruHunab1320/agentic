@@ -47,9 +47,21 @@ class AgentRegistry(LoggerMixin):
         self.logger.info(f"Registering agent type: {agent_type}")
         self.agent_types[agent_type] = agent_class
     
+    async def get_or_spawn_agent(self, config: AgentConfig) -> AgentSession:
+        """Get an existing agent session or spawn a new one if needed"""
+        # First, try to find an available agent of the same type
+        available_session = self._find_available_agent(config.agent_type, config.focus_areas)
+        
+        if available_session:
+            self.logger.info(f"Reusing existing {config.agent_type} agent: {available_session.id}")
+            return available_session
+        
+        # No suitable agent found, spawn a new one
+        return await self.spawn_agent(config)
+    
     async def spawn_agent(self, config: AgentConfig) -> AgentSession:
         """Spawn a new agent instance"""
-        self.logger.info(f"Spawning agent: {config.name} ({config.agent_type})")
+        self.logger.info(f"Spawning new agent: {config.name} ({config.agent_type})")
         
         if config.agent_type not in self.agent_types:
             raise ValueError(f"Unknown agent type: {config.agent_type}")
@@ -140,6 +152,25 @@ class AgentRegistry(LoggerMixin):
                 matching_agents.append(session)
         
         return matching_agents
+    
+    def _find_available_agent(self, agent_type: AgentType, focus_areas: List[str] = None) -> Optional[AgentSession]:
+        """Find an available agent of the specified type and focus areas"""
+        for session in self.active_sessions.values():
+            if (session.agent_config.agent_type == agent_type and 
+                session.is_available and 
+                session.status == "active"):
+                
+                # If focus areas are specified, check for compatibility
+                if focus_areas:
+                    # Check if the agent's focus areas overlap with requested ones
+                    agent_focus = set(session.agent_config.focus_areas)
+                    requested_focus = set(focus_areas)
+                    if not agent_focus.intersection(requested_focus):
+                        continue  # No overlap, skip this agent
+                
+                return session
+        
+        return None
     
     def get_agents_by_type(self, agent_type: AgentType) -> List[AgentSession]:
         """Find agents of specific type"""

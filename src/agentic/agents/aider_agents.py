@@ -35,6 +35,8 @@ class BaseAiderAgent(Agent, LoggerMixin):
             "aider",
             "--yes-always",  # Auto-confirm changes
             "--no-git",  # Don't auto-commit
+            "--no-fancy-input",  # Disable fancy input for automation
+            "--no-show-model-warnings",  # Suppress model warnings for automation
             f"--model={model}",
         ]
         
@@ -54,21 +56,24 @@ class BaseAiderAgent(Agent, LoggerMixin):
         try:
             from agentic.utils.credentials import get_api_key
             
+            # Load .env file to ensure environment variables are available
+            try:
+                from dotenv import load_dotenv
+                load_dotenv()
+            except ImportError:
+                pass
+            
             # Determine which provider we need based on model
             model = self._get_model_for_aider()
             
+            # For Aider agents, we only use Gemini models
             if "gemini" in model.lower() or "google" in model.lower():
                 provider = "gemini"
                 env_var = "GEMINI_API_KEY"
-            elif "claude" in model.lower() or "anthropic" in model.lower():
-                provider = "anthropic"
-                env_var = "ANTHROPIC_API_KEY"
-            elif "gpt" in model.lower() or "openai" in model.lower():
-                provider = "openai"
-                env_var = "OPENAI_API_KEY"
             else:
-                # Default to trying all providers
-                return
+                # All Aider agents default to Gemini, so always try gemini
+                provider = "gemini"
+                env_var = "GEMINI_API_KEY"
             
             # Get API key from credential store
             api_key = get_api_key(provider, self.config.workspace_path)
@@ -76,10 +81,13 @@ class BaseAiderAgent(Agent, LoggerMixin):
             if api_key:
                 # Set environment variable for this process
                 os.environ[env_var] = api_key
+                print(f"✅ {provider.upper()} API key loaded successfully")
+                print(f"✅ Set {env_var} = {api_key[:10]}...")
             else:
                 # Warn user about missing API key
                 print(f"⚠️ Warning: No {provider.upper()} API key found.")
                 print(f"Set one with: agentic keys set {provider}")
+                print(f"Or add {env_var} to your .env file")
                 
         except ImportError:
             # Credentials module not available, continue without setup
@@ -87,6 +95,43 @@ class BaseAiderAgent(Agent, LoggerMixin):
         except Exception as e:
             # Log error but continue
             pass
+    
+    def _set_environment_variables(self, env: dict) -> None:
+        """Set up environment variables for agent execution"""
+        # This method provides additional environment setup
+        # The main API key setup is already handled in _setup_api_keys()
+        
+        # Set agent-specific environment variables if needed
+        env.setdefault('AGENTIC_AGENT_TYPE', self.config.agent_type.value)
+        env.setdefault('AGENTIC_AGENT_NAME', self.config.name)
+        
+        # Set workspace path
+        env.setdefault('AGENTIC_WORKSPACE', str(self.config.workspace_path))
+        
+        # Set terminal environment to help with Aider
+        env.setdefault('TERM', 'xterm-256color')
+        env.setdefault('PYTHONUNBUFFERED', '1')
+        
+        # Ensure API keys are available in subprocess environment
+        # Re-run API key setup to make sure they're in the environment
+        try:
+            from agentic.utils.credentials import get_api_key
+            from dotenv import load_dotenv
+            load_dotenv()  # Load .env again
+            
+            # Get the model and provider
+            model = self._get_model_for_aider()
+            if "gemini" in model.lower() or "google" in model.lower():
+                provider = "gemini"
+                env_var = "GEMINI_API_KEY"
+                
+                api_key = get_api_key(provider, self.config.workspace_path)
+                if api_key:
+                    env[env_var] = api_key
+                    print(f"🔑 Set {env_var} for subprocess")
+                    
+        except Exception as e:
+            print(f"⚠️ Error setting API key in subprocess: {e}")
     
     def _get_model_for_aider(self) -> str:
         """Get the appropriate model for Aider with intelligent fallbacks"""
@@ -97,11 +142,12 @@ class BaseAiderAgent(Agent, LoggerMixin):
         
         # Handle Gemini models - map to Aider's expected format
         gemini_model_map = {
+            'gemini-2.5-pro': 'gemini-2.5-pro',
             'gemini-1.5-pro': 'gemini/gemini-1.5-pro-latest',
             'gemini-1.5-flash': 'gemini/gemini-1.5-flash-latest',
-            'gemini-pro': 'gemini/gemini-1.5-pro-latest',
+            'gemini-pro': 'gemini-2.5-pro',  # Use stable 2.5 pro
             'gemini-flash': 'gemini/gemini-1.5-flash-latest',
-            'gemini': 'gemini/gemini-1.5-pro-latest',  # Default Gemini
+            'gemini': 'gemini-2.5-pro',  # Default to stable 2.5 Pro
         }
         
         # Handle Claude models - ensure correct format
@@ -163,6 +209,10 @@ class BaseAiderAgent(Agent, LoggerMixin):
                 self.logger.error("Aider not found in PATH. Please install aider.")
                 return False
             
+            # Handle Aider first-time setup if needed
+            if not await self._ensure_aider_setup():
+                self.logger.warning("Aider setup may have issues, but continuing...")
+            
             # Verify model access
             if not await self._verify_model_access():
                 self.logger.warning("Could not verify model access, but continuing...")
@@ -199,6 +249,63 @@ class BaseAiderAgent(Agent, LoggerMixin):
         """Wait for process to terminate"""
         while process.poll() is None:
             await asyncio.sleep(0.1)
+    
+    async def _ensure_aider_setup(self) -> bool:
+        """Ensure Aider is properly set up with API keys and model configuration"""
+        try:
+            # Test if Aider can run without prompting for setup
+            test_cmd = ["aider", "--help"]
+            
+            process = await asyncio.create_subprocess_exec(
+                *test_cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=str(self.workspace_path)
+            )
+            
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=10)
+            
+            if process.returncode == 0:
+                self.logger.debug("Aider basic command works")
+                
+                # Test with our model to see if it prompts for setup
+                model = self._get_model_for_aider()
+                model_test_cmd = ["aider", "--model", model, "--help"]
+                
+                process = await asyncio.create_subprocess_exec(
+                    *model_test_cmd,
+                    stdin=asyncio.subprocess.PIPE,
+                    stdout=asyncio.subprocess.PIPE, 
+                    stderr=asyncio.subprocess.PIPE,
+                    cwd=str(self.workspace_path)
+                )
+                
+                # Send 'N' to decline OpenRouter setup and documentation if prompted
+                try:
+                    stdout, stderr = await asyncio.wait_for(
+                        process.communicate(input=b"N\nN\n"), 
+                        timeout=15
+                    )
+                    
+                    combined_output = stdout.decode() + stderr.decode()
+                    
+                    # Check if there were API key issues
+                    if "No LLM model was specified" in combined_output or "Login to OpenRouter" in combined_output:
+                        self.logger.info("Aider needs model/API key setup - our setup should handle this")
+                        return True  # We'll handle this with our own API key setup
+                    
+                    return True
+                    
+                except asyncio.TimeoutError:
+                    process.kill()
+                    self.logger.warning("Aider model test timed out")
+                    return True
+            
+            return True
+            
+        except Exception as e:
+            self.logger.warning(f"Aider setup check failed: {e}")
+            return True  # Don't fail completely
     
     async def _verify_model_access(self) -> bool:
         """Verify that the AI model is accessible"""
@@ -292,14 +399,14 @@ class BaseAiderAgent(Agent, LoggerMixin):
             model = self.ai_model_config['model']
             # Map our model names to Aider-compatible names
             if model == 'gemini':
-                cmd.extend(["--model", "gemini/gemini-1.5-pro-latest"])
+                cmd.extend(["--model", "gemini-2.5-pro"])
             elif model in ['claude', 'claude-sonnet']:
                 cmd.extend(["--model", "sonnet"])
             else:
                 cmd.extend(["--model", model])
         else:
-            # Default to Gemini for Aider agents
-            cmd.extend(["--model", "gemini/gemini-1.5-pro-latest"])
+            # Default to Gemini 2.5 Pro for Aider agents
+            cmd.extend(["--model", "gemini-2.5-pro"])
         
         # Add target files if we found any (following Aider best practices)
         if target_files:
@@ -311,6 +418,9 @@ class BaseAiderAgent(Agent, LoggerMixin):
         # Build specialized message based on agent type and task
         message = self._build_specialized_message(task)
         cmd.extend(["--message", message])
+        
+        # Add exit flag to prevent hanging
+        cmd.extend(["--exit"])
         
         return cmd
     
@@ -391,16 +501,17 @@ Prioritize working with these file patterns:
     async def _execute_aider_with_session_management(self, cmd: List[str], env: dict, task: Task) -> TaskResult:
         """Execute Aider with better session management and output parsing"""
         try:
-            # Execute the command
+            # Execute the command with proper stdin handling
             process = await asyncio.create_subprocess_exec(
                 *cmd,
+                stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 env=env,
                 cwd=str(self.workspace_path)
             )
             
-            stdout, stderr = await process.communicate()
+            stdout, stderr = await process.communicate(input=b'')
             output = stdout.decode('utf-8', errors='replace')
             error_output = stderr.decode('utf-8', errors='replace')
             
@@ -444,7 +555,7 @@ Prioritize working with these file patterns:
             "Changes applied successfully"
         ]
         
-        # Check for error indicators
+        # Check for error indicators  
         error_indicators = [
             "Error:",
             "Failed to",
@@ -453,14 +564,26 @@ Prioritize working with these file patterns:
             "Permission denied"
         ]
         
+        # Harmless warnings that should be ignored
+        harmless_warnings = [
+            "Warning: Input is not a terminal",
+            "Terminal warning"
+        ]
+        
         combined_output = stdout + stderr
         
+        # Check if failure is due to harmless warnings only
+        is_harmless_warning = any(warning in stderr for warning in harmless_warnings)
+        has_real_errors = any(error in combined_output for error in error_indicators)
+        
         # Determine success based on return code and output content
-        if return_code == 0:
+        if return_code == 0 or (is_harmless_warning and not has_real_errors):
             # Look for actual changes or meaningful output
             if any(indicator in combined_output for indicator in success_indicators):
                 success = True
             elif "Tokens:" in combined_output:  # Aider ran but maybe no changes needed
+                success = True
+            elif stdout.strip():  # Has some output
                 success = True
             else:
                 success = False

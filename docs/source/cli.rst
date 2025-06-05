@@ -16,7 +16,10 @@ Quick Reference
    agentic --help                    # Show help
    agentic --version                 # Show version
    agentic init                      # Initialize project
-   agentic "Add user authentication" # Natural language request
+   agentic status                    # Show agent status
+   agentic analyze                   # Analyze project
+   agentic exec "Add authentication" # Execute natural language request
+   agentic interactive               # Start interactive mode
 
 Global Options
 --------------
@@ -31,7 +34,6 @@ These options are available for all commands:
    --config PATH         Path to configuration file
    --log-level LEVEL     Set logging level (DEBUG, INFO, WARNING, ERROR)
    --no-color            Disable colored output
-   --profile             Enable performance profiling
    --help                Show help message
    --version             Show version information
 
@@ -45,14 +47,11 @@ Initialize Agentic in a project directory.
 
 .. code-block:: bash
 
-   agentic init [OPTIONS] [DIRECTORY]
+   agentic init [OPTIONS]
 
 **Options:**
 
-* ``--template NAME``: Use a project template (fastapi, react, python-package)
 * ``--force``: Overwrite existing configuration
-* ``--minimal``: Create minimal configuration
-* ``--interactive``: Interactive setup wizard
 
 **Examples:**
 
@@ -61,49 +60,41 @@ Initialize Agentic in a project directory.
    # Initialize in current directory
    agentic init
 
-   # Initialize with FastAPI template
-   agentic init --template fastapi
+   # Force re-initialization
+   agentic init --force
 
-   # Interactive setup
-   agentic init --interactive
+**What it does:**
 
-Natural Language Interface
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+* Creates `.agentic/` directory with configuration
+* Analyzes project structure
+* Sets up agent registry
+* Initializes orchestrator
 
-Execute natural language requests directly:
+status
+~~~~~~
+
+Show current status of agents and system.
 
 .. code-block:: bash
 
-   agentic [OPTIONS] "REQUEST_TEXT"
+   agentic status [OPTIONS]
 
 **Options:**
 
-* ``--agent NAME``: Use specific agent
-* ``--model NAME``: Use specific AI model
-* ``--files PATTERN``: Target specific files
-* ``--scope DIRECTORY``: Limit scope to directory
-* ``--dry-run``: Show what would be done without executing
-* ``--auto-commit``: Automatically commit changes
-* ``--backup``: Create backup before changes
+* ``--format FORMAT``: Output format (table, json, simple)
 
 **Examples:**
 
 .. code-block:: bash
 
-   # Basic request
-   agentic "Add logging to all functions"
+   # Show status table
+   agentic status
 
-   # With specific agent
-   agentic --agent python-expert "Optimize this algorithm"
+   # JSON output
+   agentic status --format json
 
-   # Target specific files
-   agentic --files "*.py" "Add type hints"
-
-   # Dry run mode
-   agentic --dry-run "Refactor authentication module"
-
-Project Management
-------------------
+   # Simple text output
+   agentic status --format simple
 
 analyze
 ~~~~~~~
@@ -116,10 +107,7 @@ Analyze project structure and provide insights.
 
 **Options:**
 
-* ``--format FORMAT``: Output format (text, json, html)
-* ``--depth LEVEL``: Analysis depth (1-5)
-* ``--include-metrics``: Include code quality metrics
-* ``--output FILE``: Save analysis to file
+* ``--output FORMAT``: Output format (table, json, yaml)
 
 **Examples:**
 
@@ -128,450 +116,214 @@ Analyze project structure and provide insights.
    # Basic analysis
    agentic analyze
 
-   # Detailed analysis with metrics
-   agentic analyze --depth 5 --include-metrics
+   # JSON output
+   agentic analyze --output json
 
-   # Save to file
-   agentic analyze --format json --output analysis.json
+   # YAML output  
+   agentic analyze --output yaml
 
-status
-~~~~~~
-
-Show current project status and active changes.
-
-.. code-block:: bash
-
-   agentic status [OPTIONS]
-
-**Options:**
-
-* ``--verbose``: Show detailed status
-* ``--changes-only``: Show only files with changes
-* ``--branch``: Show Git branch information
-
-insights
-~~~~~~~~
-
-Generate project insights and recommendations.
-
-.. code-block:: bash
-
-   agentic insights [OPTIONS]
-
-**Options:**
-
-* ``--category TYPE``: Focus on specific insights (performance, security, structure)
-* ``--priority LEVEL``: Filter by priority (low, medium, high, critical)
-* ``--format FORMAT``: Output format
-
-Agent Management
-----------------
-
-agent
-~~~~~
-
-Manage AI agents and their configurations.
-
-.. code-block:: bash
-
-   agentic agent SUBCOMMAND [OPTIONS]
-
-**Subcommands:**
-
-* ``list``: List available agents
-* ``create``: Create custom agent
-* ``remove``: Remove custom agent
-* ``info``: Show agent information
-* ``test``: Test agent functionality
-
-**Examples:**
-
-.. code-block:: bash
-
-   # List all agents
-   agentic agent list
-
-   # Create custom agent
-   agentic agent create --name "security-expert" --specialization "security"
-
-   # Get agent info
-   agentic agent info python-expert
-
-   # Test agent
-   agentic agent test --agent python-expert
-
-models
-~~~~~~
-
-Manage AI models and provider configurations.
-
-.. code-block:: bash
-
-   agentic models SUBCOMMAND [OPTIONS]
-
-**Subcommands:**
-
-* ``list``: List available models
-* ``test``: Test model connectivity
-* ``benchmark``: Benchmark model performance
-
-**Examples:**
-
-.. code-block:: bash
-
-   # List models
-   agentic models list
-
-   # Test OpenAI connection
-   agentic models test --provider openai
-
-   # Benchmark models
-   agentic models benchmark --task "code-generation"
-
-Batch Operations
-----------------
-
-batch
-~~~~~
-
-Execute operations on multiple files or run multiple commands.
-
-.. code-block:: bash
-
-   agentic batch [OPTIONS]
-
-**Options:**
-
-* ``--input PATTERN``: Input file pattern
-* ``--commands FILE``: File containing commands to run
-* ``--parallel N``: Number of parallel operations
-* ``--continue-on-error``: Continue processing after errors
-* ``--output-dir DIR``: Directory for output files
-
-**Examples:**
-
-.. code-block:: bash
-
-   # Process multiple files
-   agentic batch --input "src/*.py" "Add docstrings to all functions"
-
-   # Run commands from file
-   agentic batch --commands batch_commands.txt
-
-   # Parallel processing
-   agentic batch --parallel 4 --input "*.js" "Convert to TypeScript"
-
-Git Integration
----------------
-
-branch
-~~~~~~
-
-Create and manage feature branches with AI assistance.
-
-.. code-block:: bash
-
-   agentic branch [OPTIONS] BRANCH_NAME "TASK_DESCRIPTION"
-
-**Options:**
-
-* ``--base BRANCH``: Base branch (default: main)
-* ``--push``: Push branch after creation
-* ``--pull-request``: Create pull request
-
-**Examples:**
-
-.. code-block:: bash
-
-   # Create feature branch
-   agentic branch feature/auth "Implement user authentication"
-
-   # Create and push branch
-   agentic branch --push feature/api "Add REST API endpoints"
-
-commit
-~~~~~~
-
-Generate commit messages and commit changes.
-
-.. code-block:: bash
-
-   agentic commit [OPTIONS] [MESSAGE]
-
-**Options:**
-
-* ``--all``: Commit all changes (git add -A)
-* ``--generate``: Generate commit message automatically
-* ``--conventional``: Use conventional commit format
-
-**Examples:**
-
-.. code-block:: bash
-
-   # Auto-generate commit message
-   agentic commit --generate
-
-   # Commit with generated conventional message
-   agentic commit --all --conventional
-
-Quality & Testing
------------------
-
-quality-check
-~~~~~~~~~~~~~
-
-Run comprehensive code quality checks.
-
-.. code-block:: bash
-
-   agentic quality-check [OPTIONS]
-
-**Options:**
-
-* ``--fix``: Automatically fix issues where possible
-* ``--strict``: Use strict quality standards
-* ``--report FILE``: Generate quality report
-* ``--format FORMAT``: Report format (text, json, html)
-
-**Examples:**
-
-.. code-block:: bash
-
-   # Basic quality check
-   agentic quality-check
-
-   # Fix issues automatically
-   agentic quality-check --fix
-
-   # Generate detailed report
-   agentic quality-check --report quality_report.html --format html
-
-test
+exec
 ~~~~
 
-Generate and run tests with AI assistance.
+Execute commands using natural language.
 
 .. code-block:: bash
 
-   agentic test [OPTIONS] [PATTERN]
+   agentic exec [OPTIONS] COMMAND...
 
 **Options:**
 
-* ``--generate``: Generate missing tests
-* ``--coverage MIN``: Minimum coverage requirement
-* ``--type TYPE``: Test type (unit, integration, e2e)
-* ``--update-snapshots``: Update test snapshots
+* ``--agent NAME``: Route to specific agent
+* ``--context TEXT``: Additional context for the command
 
 **Examples:**
 
 .. code-block:: bash
 
-   # Run tests
-   agentic test
+   # Basic command execution
+   agentic exec "Add user authentication to the API"
 
-   # Generate tests for specific files
-   agentic test --generate "src/auth.py"
+   # With specific agent
+   agentic exec --agent claude-code "Debug the login function"
 
-   # Require 90% coverage
-   agentic test --coverage 90
+   # With additional context
+   agentic exec --context "This is a FastAPI project" "Add error handling"
+
+spawn
+~~~~~
+
+Manually spawn specific agents.
+
+.. code-block:: bash
+
+   agentic spawn [OPTIONS] AGENT_TYPE
+
+**Available Agent Types:**
+
+* ``claude-code``: Claude Code CLI agent for development tasks
+* ``aider-frontend``: Frontend development with Aider
+* ``aider-backend``: Backend development with Aider
+* ``aider-testing``: Testing and QA with Aider
+
+**Examples:**
+
+.. code-block:: bash
+
+   # Spawn Claude Code agent
+   agentic spawn claude-code
+
+   # Spawn Aider frontend agent
+   agentic spawn aider-frontend
+
+interactive
+~~~~~~~~~~~
+
+Start interactive mode for conversational development.
+
+.. code-block:: bash
+
+   agentic interactive [OPTIONS]
+
+**Features:**
+
+* Real-time agent status monitoring
+* Command history and suggestions
+* Multi-pane interface with Rich TUI
+* Agent health monitoring
+* Live execution feedback
+
+**Interactive Commands:**
+
+* ``status`` - Show agent status
+* ``clear`` - Clear output
+* ``help`` - Show help
+* ``exit/quit/q`` - Exit interactive mode
+
+**Examples:**
+
+.. code-block:: bash
+
+   # Start interactive mode
+   agentic interactive
+
+Natural Language Interface
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You can also execute natural language requests directly:
+
+.. code-block:: bash
+
+   agentic [OPTIONS] "REQUEST_TEXT"
+
+This is equivalent to ``agentic exec "REQUEST_TEXT"`` but more convenient for quick commands.
+
+**Examples:**
+
+.. code-block:: bash
+
+   # Direct natural language command
+   agentic "Add logging to all functions"
+
+   # With options
+   agentic --agent claude-code "Optimize this algorithm"
+
+IDE Integration Commands
+------------------------
+
+The CLI also includes IDE integration commands under the ``ide`` subcommand group:
+
+.. code-block:: bash
+
+   agentic ide init           # Initialize IDE integrations
+   agentic ide status         # Show IDE integration status  
+   agentic ide command TEXT   # Execute IDE command
+   agentic ide edit FILE      # Edit file through IDE integration
 
 Configuration
 -------------
 
-config
-~~~~~~
+Agentic uses configuration files in the ``.agentic/`` directory:
 
-Manage Agentic configuration.
+* ``config.yml`` - Main configuration
+* ``agents/`` - Agent-specific configurations
+* ``logs/`` - Log files
 
-.. code-block:: bash
+**Sample Configuration:**
 
-   agentic config SUBCOMMAND [OPTIONS]
+.. code-block:: yaml
 
-**Subcommands:**
-
-* ``show``: Show current configuration
-* ``set``: Set configuration value
-* ``unset``: Remove configuration value
-* ``validate``: Validate configuration
-
-**Examples:**
-
-.. code-block:: bash
-
-   # Show configuration
-   agentic config show
-
-   # Set API key
-   agentic config set api.openai.api_key "your-key"
-
-   # Validate configuration
-   agentic config validate
-
-Advanced Usage
---------------
-
-Plugin System
-~~~~~~~~~~~~~
-
-.. code-block:: bash
-
-   # List plugins
-   agentic plugins list
-
-   # Install plugin
-   agentic plugins install agentic-docker
-
-   # Enable plugin
-   agentic plugins enable docker
-
-Debugging & Monitoring
-~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: bash
-
-   # Debug mode
-   agentic --debug "Complex task"
-
-   # Profile performance
-   agentic --profile "Large refactoring"
-
-   # View logs
-   agentic logs --tail 100
-
-   # System status
-   agentic system-status
-
-Custom Scripts
-~~~~~~~~~~~~~~
-
-.. code-block:: bash
-
-   # Run custom script
-   agentic run script.py
-
-   # Execute workflow
-   agentic workflow run deployment
+   workspace_path: "/path/to/project"
+   log_level: "INFO"
+   
+   agents:
+     claude_code:
+       enabled: true
+       model: "claude-3-sonnet"
+     
+     aider:
+       enabled: true
+       focus_areas: ["frontend", "backend", "testing"]
 
 Environment Variables
 ---------------------
 
-Agentic recognizes these environment variables:
+Key environment variables:
+
+* ``AGENTIC_CONFIG_PATH`` - Path to configuration file
+* ``AGENTIC_LOG_LEVEL`` - Default log level
+* ``ANTHROPIC_API_KEY`` - Anthropic API key (optional enhancement)
+* ``OPENAI_API_KEY`` - OpenAI API key (optional)
+
+Authentication Setup
+--------------------
+
+Agentic requires authentication for AI providers:
+
+1. **Claude Code CLI** (Primary):
+   
+   .. code-block:: bash
+   
+      # Requires Claude Pro subscription
+      # Authentication handled through browser
+
+2. **API Keys** (Enhancement):
+   
+   .. code-block:: bash
+   
+      export ANTHROPIC_API_KEY="your-key"
+      export OPENAI_API_KEY="your-key"
+
+See ``AUTHENTICATION_SETUP.md`` for detailed setup instructions.
+
+Troubleshooting
+---------------
+
+**Common Issues:**
+
+* **"No available agents found"**: Run ``agentic init`` first
+* **"Claude Code CLI not found"**: Install with ``npm install -g @anthropic-ai/claude-code``
+* **Authentication errors**: Check Claude Pro subscription and API keys
+
+**Debug Mode:**
 
 .. code-block:: bash
 
-   # API Keys
-   OPENAI_API_KEY              # OpenAI API key
-   ANTHROPIC_API_KEY           # Anthropic API key
-   GOOGLE_API_KEY              # Google AI API key
+   agentic --debug exec "your command"
 
-   # Configuration
-   AGENTIC_CONFIG_DIR          # Configuration directory
-   AGENTIC_LOG_LEVEL           # Default log level
-   AGENTIC_CACHE_DIR           # Cache directory
-   AGENTIC_PLUGINS_DIR         # Plugins directory
-
-   # Behavior
-   AGENTIC_AUTO_COMMIT         # Auto-commit changes (true/false)
-   AGENTIC_BACKUP_ENABLED      # Enable backups (true/false)
-   AGENTIC_PARALLEL_LIMIT      # Max parallel operations
-
-Exit Codes
-----------
-
-Agentic uses standard exit codes:
-
-* ``0``: Success
-* ``1``: General error
-* ``2``: Configuration error
-* ``3``: API error
-* ``4``: Permission error
-* ``5``: Network error
-* ``130``: Interrupted by user (Ctrl+C)
-
-Examples
---------
-
-**Complete Workflow Example**
+**Verbose Output:**
 
 .. code-block:: bash
 
-   # Initialize project
-   cd my-project
-   agentic init --template fastapi
+   agentic --verbose status
 
-   # Analyze current state
-   agentic analyze --include-metrics
+**Log Files:**
 
-   # Add features
-   agentic "Add user authentication with JWT tokens"
-   agentic "Add input validation for all endpoints"
-   agentic "Add comprehensive logging"
+Check ``.agentic/logs/`` for detailed execution logs.
 
-   # Generate tests
-   agentic test --generate --coverage 90
-
-   # Quality check
-   agentic quality-check --fix
-
-   # Commit changes
-   agentic commit --generate --conventional
-
-**Batch Processing Example**
-
-.. code-block:: bash
-
-   # Create batch command file
-   echo 'Add type hints to all functions' > commands.txt
-   echo 'Add docstrings to all classes' >> commands.txt
-   echo 'Add error handling to all API endpoints' >> commands.txt
-
-   # Execute batch
-   agentic batch --commands commands.txt --parallel 3
-
-**Custom Agent Example**
-
-.. code-block:: bash
-
-   # Create security-focused agent
-   agentic agent create --name "security-expert" \
-     --specialization "security" \
-     --model "gpt-4" \
-     --temperature 0.1
-
-   # Use custom agent
-   agentic --agent security-expert "Review this code for vulnerabilities"
-
-Shell Completion
+Performance Tips
 ----------------
 
-Enable shell completion for better CLI experience:
-
-**Bash:**
-
-.. code-block:: bash
-
-   # Add to ~/.bashrc
-   eval "$(_AGENTIC_COMPLETE=bash_source agentic)"
-
-**Zsh:**
-
-.. code-block:: bash
-
-   # Add to ~/.zshrc
-   eval "$(_AGENTIC_COMPLETE=zsh_source agentic)"
-
-**Fish:**
-
-.. code-block:: bash
-
-   # Add to ~/.config/fish/config.fish
-   eval (env _AGENTIC_COMPLETE=fish_source agentic)
-
-Getting Help
-------------
-
-* Use ``agentic --help`` for general help
-* Use ``agentic COMMAND --help`` for command-specific help
-* Check the logs: ``~/.agentic/logs/agentic.log``
-* Join our community: https://discord.gg/agentic
-* Report issues: https://github.com/agentic-ai/agentic/issues 
+* Use ``--quiet`` for scripting to reduce output
+* Use ``agentic interactive`` for multiple operations
+* Use specific agents (``--agent``) when you know the task type
+* Check ``agentic status`` before running commands 
