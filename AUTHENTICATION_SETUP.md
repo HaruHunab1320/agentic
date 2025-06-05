@@ -1,96 +1,127 @@
 # 🔐 Agentic Authentication & Configuration Guide
 
-## Current Implementation Status
+## Authentication Options Overview
 
-### ✅ **What's Working:**
-- **Aider Integration**: Fully implemented with subprocess management
-- **API Key Support**: Environment variables and configuration files
-- **Claude Code Agent**: Ready for reasoning tasks
-- **Configuration Framework**: YAML-based config in `.agentic/config.yml`
+Agentic supports **multiple AI integrations** with different authentication methods:
 
-### ⚠️ **What Needs Setup:**
-- API keys must be configured
-- Minor implementation fixes needed for full CLI functionality
+### 🤖 **Option 1: Anthropic API (Recommended)**
+- **What**: Direct API access to Claude models via Aider
+- **Authentication**: API key (`ANTHROPIC_API_KEY`)
+- **Usage**: Powers Aider agents for specialized development tasks
+- **Cost**: Pay-per-token usage
+- **Setup**: Get API key from [console.anthropic.com](https://console.anthropic.com/)
+
+### 🖥️ **Option 2: Claude Desktop App + Claude Code CLI (Primary)** 
+- **What**: Claude Code CLI tool with desktop app authentication
+- **Authentication**: Claude Pro/Team subscription + CLI login
+- **Usage**: Advanced coding, refactoring, and project analysis
+- **Cost**: Monthly subscription (Pro: $20/month, Team: $30/month)
+- **Setup**: Install Claude Desktop + Claude Code CLI
+
+### 🔧 **Option 3: Both (Recommended for Teams)**
+- **Best of both worlds**: Specialized Aider agents + powerful Claude Code sessions
+- **Use Aider for**: Backend development, testing, focused tasks
+- **Use Claude Code for**: Code review, refactoring, complex analysis
 
 ---
 
 ## 🚀 Quick Setup Guide
 
-### 1. **Set Up API Keys**
+### **Step 1: Install Claude Code CLI**
 
-**Option A: Environment Variables (Recommended)**
+Claude Code is the **primary** coding agent in Agentic. Install it first:
+
+```bash
+# Install Claude Code CLI
+npm install -g @anthropic-ai/claude-code
+
+# Verify installation
+claude --help
+
+# Login with your Claude account
+claude
+# Follow the login prompts
+```
+
+### **Step 2: Set Up API Keys (Optional but Recommended)**
+
+For enhanced capabilities with Aider agents:
+
 ```bash
 # Add to your ~/.zshrc or ~/.bashrc
 export ANTHROPIC_API_KEY="your-anthropic-api-key-here"
-export OPENAI_API_KEY="your-openai-api-key-here"
+export OPENAI_API_KEY="your-openai-api-key-here"  # Optional
 
 # Reload your shell
 source ~/.zshrc
 ```
 
-**Option B: Direct Configuration**
-```bash
-# Set temporarily for current session
-export ANTHROPIC_API_KEY="sk-ant-api03-..."
-export OPENAI_API_KEY="sk-..."
-```
+### **Step 3: Get Your Accounts**
 
-### 2. **Get Your API Keys**
+**Claude Desktop + Pro Account (Primary):**
+1. Sign up for [Claude Pro/Team](https://claude.ai/upgrade) ($20-30/month)
+2. Download [Claude Desktop](https://claude.ai/download)
+3. Install and sign in with your Claude account
+4. Claude Code CLI will use your desktop authentication
 
-**Anthropic (Claude):**
-1. Visit https://console.anthropic.com/
-2. Create account and verify
-3. Navigate to API Keys section
-4. Generate new API key
-5. Copy the key (starts with `sk-ant-api03-...`)
-
-**OpenAI (GPT):**
-1. Visit https://platform.openai.com/
-2. Create account and add payment method
-3. Navigate to API Keys
-4. Generate new secret key
-5. Copy the key (starts with `sk-...`)
-
-### 3. **Test Direct Aider Integration**
-
-```bash
-# Test Aider with Anthropic
-aider --anthropic-api-key $ANTHROPIC_API_KEY --model claude-3-5-sonnet --help
-
-# Test Aider with OpenAI  
-aider --openai-api-key $OPENAI_API_KEY --model gpt-4 --help
-
-# Interactive session (current working method)
-aider --anthropic-api-key $ANTHROPIC_API_KEY --model claude-3-5-sonnet
-```
+**Anthropic API (Optional Enhancement):**
+1. Visit [console.anthropic.com](https://console.anthropic.com/)
+2. Create account and verify email
+3. Navigate to **API Keys** section
+4. Click **Create Key** (pay-per-token)
 
 ---
 
-## 🏗️ Architecture Overview
+## 🏗️ Architecture & Authentication Flow
 
-### **How Authentication Works:**
+### **How Claude Code Authentication Works:**
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Environment   │    │   .agentic/      │    │   Aider         │
-│   Variables     │───▶│   config.yml     │───▶│   --api-key     │
-│                 │    │                  │    │   Arguments     │
+│   Claude Pro    │    │   Claude         │    │   Claude Code   │
+│   Account       │───▶│   Desktop App    │───▶│   CLI Sessions  │
+│   Login         │    │   Authentication │    │   (Agentic)     │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Anthropic     │    │   Environment    │───▶│   Aider         │
+│   API Key       │───▶│   Variables      │    │   Subprocess    │
+│   (Optional)    │    │   .agentic/      │    │   (Specialized) │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
 
 ### **Agent Types & Authentication:**
 
-1. **Claude Code Agent**: Uses Anthropic API for reasoning
-2. **Aider Agents**: Pass API keys to Aider subprocess
-   - `AiderFrontendAgent`: Frontend development
-   - `AiderBackendAgent`: Backend development  
-   - `AiderTestingAgent`: Testing and QA
+| Agent Type | Authentication | Purpose |
+|------------|----------------|---------|
+| **Claude Code Agent** | Claude Desktop Login | Primary coding, refactoring, analysis |
+| **Claude Reasoning Agent** | Claude Desktop Login | Internal analysis, debugging, explanations |
+| **Aider Backend Agent** | Anthropic API Key | Backend development via Aider |
+| **Aider Frontend Agent** | Anthropic API Key | Frontend development via Aider |
+| **Aider Testing Agent** | Anthropic API Key | Testing and QA via Aider |
 
 ---
 
 ## 🧪 Testing Authentication
 
-### **1. Test Aider Directly:**
+### **1. Test Claude Code CLI:**
+```bash
+# Test basic functionality
+claude --help
+
+# Check authentication status
+claude
+> /status
+
+# Test with a simple query
+claude -p "explain what this project does"
+
+# Test in your project directory
+cd /path/to/your/project
+claude "analyze this codebase structure"
+```
+
+### **2. Test Aider with API Key (Optional):**
 ```bash
 # Create a test file
 echo "def hello(): pass" > test.py
@@ -102,131 +133,172 @@ aider --anthropic-api-key $ANTHROPIC_API_KEY \
       --yes \
       test.py \
       --message "Add a docstring to this function"
-
-# Should modify test.py with a docstring
 ```
 
-### **2. Test Configuration:**
+### **3. Test Agentic CLI:**
 ```bash
-# Run the setup script
-./setup_agentic.sh
-
-# Check generated config
-cat .agentic/config.yml
-```
-
-### **3. Test Agentic CLI (Limited - needs fixes):**
-```bash
-# These commands work:
+# Basic commands
 agentic --help
-agentic config --help
+agentic config show
 
-# These need implementation fixes:
-# agentic init
-# agentic status
+# Initialize workspace
+agentic init
+
+# Test Claude Code integration
+agentic spawn claude_code
+
+# Test command execution
+agentic exec "refactor the authentication system"
 ```
 
 ---
 
-## 🛠️ Current Implementation Details
+## 🛠️ Current Implementation Status
 
-### **Aider Integration Code:**
+### **✅ Fully Implemented:**
+- **Claude Code CLI integration** - Primary coding agent with subprocess management
+- **Anthropic API integration** via Aider - Specialized development tasks
+- **Configuration management** (YAML + environment variables)
+- **Agent specializations** (claude_code, frontend, backend, testing, reasoning)
+- **CLI command routing** and orchestration
+- **Project analysis** and intelligent agent selection
+
+### **🎯 Authentication Priority:**
+1. **Claude Code CLI** - Core functionality (install and login required)
+2. **Anthropic API** - Enhanced capabilities (optional but recommended)
+3. **OpenAI API** - Alternative models (completely optional)
+
+---
+
+## 🔧 Detailed Implementation
+
+### **Claude Code Integration (Primary):**
+```python
+# From src/agentic/agents/claude_code_agent.py
+class ClaudeCodeAgent(Agent):
+    async def _build_claude_command(self, task: Task) -> List[str]:
+        cmd = ["claude"]
+        
+        # Use print mode for automation
+        if task.metadata.get("mode") != "interactive":
+            cmd.extend(["-p"])
+        
+        # Add allowed tools for coding tasks
+        coding_tools = [
+            "Edit",  # File editing
+            "Bash(git *)",  # Git operations
+            "Write"  # File writing
+        ]
+        
+        for tool in coding_tools:
+            cmd.extend(["--allowedTools", tool])
+        
+        # Set model and prompt
+        cmd.extend(["--model", "sonnet"])
+        cmd.append(self._build_task_prompt(task))
+        
+        return cmd
+```
+
+### **Aider Integration (Enhancement):**
 ```python
 # From src/agentic/agents/aider_agents.py
 class BaseAiderAgent(Agent):
     def _setup_aider_args(self) -> None:
+        api_key = os.getenv("ANTHROPIC_API_KEY")
         self.aider_args = [
             "aider",
-            "--yes",  # Auto-confirm changes
-            "--no-git",  # Don't auto-commit
+            "--yes",
+            "--no-git",
+            f"--anthropic-api-key={api_key}",
             f"--model={self.config.ai_model_config.get('model', 'claude-3-5-sonnet')}",
         ]
-        
-    async def _verify_model_access(self) -> bool:
-        # Verifies API key works with Aider
-        test_cmd = self.aider_args + ["--help"]
-        result = subprocess.run(test_cmd, capture_output=True, text=True, timeout=10)
-        return result.returncode == 0
-```
-
-### **Configuration Structure:**
-```yaml
-# .agentic/config.yml
-workspace_name: "your-project"
-workspace_path: "/path/to/project"
-default_agents: ["claude_code"]
-api:
-  anthropic:
-    api_key: "sk-ant-api03-..."
-    model: "claude-3-5-sonnet"
-  openai:
-    api_key: "sk-..."
-    model: "gpt-4"
 ```
 
 ---
 
-## 🔧 Implementation Status
+## 📋 Setup Checklist
 
-### **✅ Completed:**
-- Aider subprocess integration
-- API key passing to Aider
-- Configuration file structure
-- Agent specializations (frontend, backend, testing)
-- Claude Code agent for reasoning
+### **Required for Basic Functionality:**
+- [ ] **Claude Pro/Team subscription** ($20-30/month)
+- [ ] **Claude Desktop app** installed and authenticated
+- [ ] **Claude Code CLI** installed (`npm install -g @anthropic-ai/claude-code`)
+- [ ] **Claude Code authenticated** (run `claude` and login)
+- [ ] **Python 3.10+** with Agentic installed
 
-### **🚧 Needs Fixes:**
-```python
-# Missing method in AgenticConfig
-@classmethod
-def load_or_create(cls, workspace_path: Path) -> 'AgenticConfig':
-    # Implementation needed
-    
-# Logger initialization in CLI
-def setup_logging(debug: bool = False) -> Logger:
-    # Return logger instance, not None
-```
+### **Optional for Enhanced Features:**
+- [ ] **Anthropic API Key** for specialized Aider agents
+- [ ] **OpenAI API Key** for GPT model support
+- [ ] **Git repository** for change tracking
+- [ ] **Node.js** for Claude Code CLI
 
-### **🎯 Next Steps:**
-1. Fix `AgenticConfig.load_or_create()` method
-2. Fix logger initialization in CLI
-3. Test end-to-end workflow
-4. Add API key validation
-
----
-
-## 💡 Manual Workflow (Currently Working)
-
-**Until CLI fixes are complete, you can use Aider directly:**
-
+### **Verification Commands:**
 ```bash
-# 1. Set API key
-export ANTHROPIC_API_KEY="your-key-here"
+# Check Claude Code
+claude --help
+claude -p "test authentication"
 
-# 2. Use Aider with specialized prompts
-aider --anthropic-api-key $ANTHROPIC_API_KEY \
-      --model claude-3-5-sonnet \
-      --message "You are a backend specialist. Help me optimize this database query." \
-      src/database/*.py
+# Check API keys (optional)
+echo "Anthropic: ${ANTHROPIC_API_KEY:0:10}..."
+echo "OpenAI: ${OPENAI_API_KEY:0:10}..."
 
-# 3. Or start interactive session
-aider --anthropic-api-key $ANTHROPIC_API_KEY --model claude-3-5-sonnet
+# Check Agentic installation
+agentic --version
+
+# Test end-to-end
+python test_agentic_simple.py
 ```
-
-**Example Specialized Prompts:**
-- **Frontend**: "You are a React specialist. Help me create responsive components."
-- **Backend**: "You are an API specialist. Help me design RESTful endpoints."  
-- **Testing**: "You are a testing expert. Help me write comprehensive unit tests."
-- **Debugging**: "You are a debugging expert. Help me trace this error."
 
 ---
 
-## 🎯 Summary
+## 🎯 Recommendations
 
-**The authentication framework is solid** - API keys work with Aider, configuration is flexible, and the agent architecture is well-designed. The main missing pieces are:
+### **For Immediate Use:**
+1. **Start with Claude Code CLI** - This is the primary agent and requires subscription
+2. **Test with simple coding tasks** to verify authentication
+3. **Add API keys later** for enhanced Aider agent capabilities
 
-1. **Set your API keys** (most important)
-2. **Minor CLI implementation fixes** (for full Agentic experience)
-3. **Direct Aider usage works now** (as interim solution)
+### **For Advanced Users:**
+1. **Use both authentication methods** for maximum flexibility
+2. **Claude Code for**: Complex refactoring, code review, analysis
+3. **Aider agents for**: Specialized backend/frontend/testing tasks
 
-**Bottom line**: Yes, this can work! The infrastructure is there, just needs API keys configured and minor bug fixes. 
+### **Example Usage:**
+```bash
+# Primary Claude Code usage
+agentic spawn claude_code
+agentic exec "analyze and refactor the user authentication system"
+
+# Enhanced Aider usage (with API key)
+agentic spawn backend
+agentic exec "implement a new REST API endpoint for user profiles"
+
+# Combined workflow
+agentic exec "claude_code should review the backend changes, then aider_testing should create comprehensive tests"
+```
+
+---
+
+## 🔮 Future Roadmap
+
+### **Phase 1: Enhanced Claude Code Integration**
+- Advanced session management and persistence
+- Custom CLAUDE.md memory integration
+- Multi-session coordination
+
+### **Phase 2: Desktop App Features**
+- Real-time code suggestions
+- Intelligent refactoring assistance
+- Advanced context sharing
+
+### **Phase 3: Team Features**
+- Shared Claude Desktop sessions
+- Team-wide agent coordination
+- Advanced project templates
+
+**Bottom Line**: 
+1. **Primary**: Get Claude Pro + Claude Code CLI for core functionality
+2. **Enhancement**: Add Anthropic API key for specialized Aider agents  
+3. **Optional**: OpenAI API for additional model choices
+
+**The Claude Code CLI is now the primary coding agent in Agentic** - it provides the most sophisticated coding capabilities and integrates directly with your Claude Pro subscription. 

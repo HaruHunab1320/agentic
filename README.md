@@ -58,22 +58,37 @@ $ agentic "Add JWT authentication to my FastAPI app with React frontend"
 # Install Agentic
 pip install agentic
 
-# Install required AI tools
-npm install -g @anthropic-ai/claude-code  # For Claude Code agent
-pip install aider-chat                    # For Aider agents
+# Install required AI tools (prerequisites)
+# 1. Install Aider (recommended method)
+python -m pip install aider-install
+aider-install
+
+# 2. Install Claude Code (requires Node.js)
+npm install -g @anthropic-ai/claude-code
 ```
 
 ### Setup API Keys
 ```bash
 # Set your AI provider keys (choose your preferred method)
 export ANTHROPIC_API_KEY="your-key"     # For Claude
-export GOOGLE_API_KEY="your-key"        # For Gemini
+export GOOGLE_API_KEY="your-key"        # For Gemini  
 export OPENAI_API_KEY="your-key"        # For OpenAI
+
+# Or configure Aider directly with API keys
+aider --model sonnet --api-key anthropic=your-key
+aider --model gpt-4 --api-key openai=your-key
 
 # Or use secure keyring storage
 agentic auth add anthropic your-key
 agentic auth add google your-key
 ```
+
+**Getting API Keys:**
+- [Anthropic Console](https://console.anthropic.com/) - For Claude models
+- [OpenAI Platform](https://platform.openai.com/api-keys) - For GPT models  
+- [DeepSeek Platform](https://platform.deepseek.com/) - For DeepSeek models
+
+For complete installation and configuration, see our [Installation Guide](docs/source/installation.rst).
 
 ### Initialize Your Project
 ```bash
