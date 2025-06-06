@@ -4,6 +4,7 @@ Agentic CLI - Multi-agent AI development workflows from a single CLI
 
 import asyncio
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Optional
@@ -1318,6 +1319,99 @@ def exec_multi(ctx: click.Context, command: tuple, context: str, agent_type: str
         logger.error(f"Multi-agent exec command failed: {e}")
         console.print(f"[bold red]❌ Error: {e}[/bold red]")
         raise click.ClickException(str(e))
+
+
+@cli.group()
+def model():
+    """Configure AI models for agents"""
+    pass
+
+
+@cli.group()
+def api():
+    """Manage API keys for AI providers"""
+    pass
+
+
+@api.command('set')
+@click.argument('provider', type=click.Choice(['gemini', 'anthropic', 'openai']))
+@click.argument('api_key')
+@click.option('--global', 'is_global', is_flag=True, help='Set API key globally for all projects')
+@click.pass_context
+def api_set(ctx: click.Context, provider: str, api_key: str, is_global: bool):
+    """Set API key for a provider"""
+    from agentic.utils.credentials import validate_api_key
+    
+    logger = ctx.obj['logger']
+    
+    # Validate API key format
+    is_valid, error_msg = validate_api_key(provider, api_key)
+    if not is_valid:
+        console.print(f"[red]❌ Invalid API key: {error_msg}[/red]")
+        return
+    
+    try:
+        import keyring
+        
+        if is_global:
+            # Set global API key
+            service_name = f"agentic.{provider}"
+            keyring.set_password(service_name, "global", api_key)
+            console.print(f"[green]✅ Global {provider.upper()} API key saved successfully![/green]")
+        else:
+            # Set project-specific API key
+            workspace_path = Path.cwd()
+            service_name = f"agentic.{provider}.{workspace_path.name}"
+            keyring.set_password(service_name, str(workspace_path), api_key)
+            console.print(f"[green]✅ Project-specific {provider.upper()} API key saved for {workspace_path.name}![/green]")
+        
+        # Also set it in the current environment for immediate use
+        env_vars = {
+            'gemini': 'GEMINI_API_KEY',
+            'anthropic': 'ANTHROPIC_API_KEY',
+            'openai': 'OPENAI_API_KEY'
+        }
+        os.environ[env_vars[provider]] = api_key
+        
+    except Exception as e:
+        logger.error(f"Failed to save API key: {e}")
+        console.print(f"[red]❌ Failed to save API key: {e}[/red]")
+        console.print("[yellow]💡 Tip: You can also create a .env file with your API keys[/yellow]")
+
+
+@api.command('list')
+@click.pass_context
+def api_list(ctx: click.Context):
+    """List configured API keys"""
+    from agentic.utils.credentials import list_api_keys
+    
+    logger = ctx.obj['logger']
+    
+    try:
+        keys = list_api_keys()
+        
+        if not keys:
+            console.print("[yellow]No API keys configured[/yellow]")
+            console.print("\n[dim]Set API keys with:[/dim]")
+            console.print("  agentic api set gemini YOUR_KEY")
+            console.print("  agentic api set anthropic YOUR_KEY --global")
+            return
+        
+        table = Table(title="🔑 Configured API Keys")
+        table.add_column("Provider", style="cyan")
+        table.add_column("Scope", style="magenta")
+        table.add_column("Source", style="green")
+        table.add_column("Key", style="dim")
+        
+        for provider, info in keys.items():
+            masked_key = info['key'][:10] + "..." + info['key'][-4:] if len(info['key']) > 20 else "***"
+            table.add_row(provider.upper(), info['scope'], info['source'], masked_key)
+        
+        console.print(table)
+        
+    except Exception as e:
+        logger.error(f"Failed to list API keys: {e}")
+        console.print(f"[red]❌ Error: {e}[/red]")
 
 
 @cli.group()

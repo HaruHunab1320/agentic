@@ -1,0 +1,32 @@
+{
+  "name": "todo-app-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "scripts": {
+    "start": "echo \"Please configure your start script, e.g., using react-scripts start or vite\"",
+    "build": "echo \"Please configure your build script, e.g., using react-scripts build or vite build\"",
+    "test": "echo \"Please configure your test script, e.g., using react-scripts test or vitest\""
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

@@ -180,6 +180,10 @@ This project uses Agentic's Claude Code integration for AI-powered development t
     async def _ensure_claude_authentication(self) -> bool:
         """Ensure Claude Code is authenticated and trusted for this workspace"""
         try:
+            # Always handle potential first-time setup by running a quick test
+            # This will either complete immediately or trigger the setup wizard
+            await self._handle_claude_first_time_setup()
+            
             # Test if Claude Code can access the workspace without prompting
             test_cmd = [
                 "claude", 
@@ -242,6 +246,59 @@ This project uses Agentic's Claude Code integration for AI-powered development t
             # Don't fail completely - the user can manually authenticate if needed
             return True
     
+    async def _handle_claude_first_time_setup(self) -> None:
+        """Handle Claude Code first-time setup (theme selection)"""
+        try:
+            # Check if setup might be needed by looking for the Welcome message
+            test_cmd = ["claude", "--version"]
+            
+            process = await asyncio.create_subprocess_exec(
+                *test_cmd,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=str(self.project_root)
+            )
+            
+            # If version works quickly, setup is already done
+            try:
+                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=2)
+                if process.returncode == 0:
+                    self.logger.debug("Claude Code already set up")
+                    return
+            except asyncio.TimeoutError:
+                # Kill the version check
+                process.kill()
+                await process.wait()
+            
+            # Now run actual setup - the version check hanging means setup is needed
+            self.logger.info("Claude Code needs setup - selecting dark mode automatically")
+            setup_cmd = ["claude", "-p", "echo setup"]
+            
+            process = await asyncio.create_subprocess_exec(
+                *setup_cmd,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=str(self.project_root)
+            )
+            
+            # Wait a bit for the prompt to appear, then send "1" for dark mode
+            await asyncio.sleep(0.5)
+            process.stdin.write(b"1\n")
+            await process.stdin.drain()
+            
+            try:
+                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=10)
+                self.logger.info("Claude Code first-time setup completed")
+            except asyncio.TimeoutError:
+                process.kill()
+                await process.wait()
+                self.logger.warning("Claude Code setup timed out")
+                
+        except Exception as e:
+            self.logger.warning(f"Failed to handle Claude Code setup: {e}")
+    
     async def stop(self) -> bool:
         """Stop the Claude Code agent session."""
         try:
@@ -283,6 +340,7 @@ This project uses Agentic's Claude Code integration for AI-powered development t
             
             self.logger.info(f"Executing {execution_mode} task: {task.command[:50]}...")
             self.logger.debug(f"Full command: {' '.join(cmd)}")  # Log full command for debugging
+            self.logger.debug(f"Working directory: {self.workspace_path}")
             
             # Set up environment with API keys
             env = os.environ.copy()
@@ -312,7 +370,12 @@ This project uses Agentic's Claude Code integration for AI-powered development t
             'summarize', 'review', 'debug', 'find', 'check'
         ]
         
-        # Interactive tasks → interactive mode for iterative work
+        # File creation tasks → print mode with explicit file creation prompts
+        file_creation_tasks = [
+            'create', 'write', 'build', 'implement', 'generate'
+        ]
+        
+        # Interactive tasks → interactive mode for iterative work only
         interactive_tasks = [
             'help me', 'work with me', 'iterative', 'step by step',
             'refactor', 'improve', 'optimize'
@@ -321,10 +384,12 @@ This project uses Agentic's Claude Code integration for AI-powered development t
         # Determine mode
         if any(task in command_lower for task in quick_tasks):
             return "print"  # One-shot mode for quick results
+        elif any(task in command_lower for task in file_creation_tasks):
+            return "print"  # Use print mode for automated file creation
         elif any(task in command_lower for task in interactive_tasks):
             return "interactive"  # Interactive mode for complex work
         else:
-            # Default to print mode for most automated tasks
+            # Default to print mode for automated tasks
             return "print"
     
     def _build_enhanced_claude_command(self, task: Task, execution_mode: str) -> List[str]:
@@ -349,6 +414,12 @@ This project uses Agentic's Claude Code integration for AI-powered development t
         if execution_mode == "print":
             # Print mode for quick, automated tasks
             cmd.extend(["-p"])
+            
+            # Explicitly allow Write tool for file creation tasks
+            if any(keyword in task.command.lower() for keyword in ['create', 'write', 'build', 'implement']):
+                cmd.extend(["--allowedTools", "Write,Edit,MultiEdit,NotebookEdit"])
+                # Add max turns to allow multiple file operations
+                cmd.extend(["--max-turns", "20"])
             
             # ENHANCED: Use memory features for context
             enhanced_prompt = self._build_enhanced_prompt_with_memory(task)
@@ -396,8 +467,12 @@ This project uses Agentic's Claude Code integration for AI-powered development t
         if context_additions:
             prompt_parts.append("Additional context: " + " ".join(context_additions))
         
-        # Add the main task
+        # Add the main task with explicit file creation instruction
         prompt_parts.append(f"Task: {task.command}")
+        
+        # CRITICAL: Explicit file creation instruction for multi-agent coordination
+        if any(keyword in task.command.lower() for keyword in ['create', 'write', 'build', 'implement']):
+            prompt_parts.append("IMPORTANT: You MUST use the Write tool to create actual files. Do not just show code examples. Use Write to save each file to the filesystem. Create all necessary files including package.json, main.py, components, etc.")
         
         # IMPORTANT: Add memory update instruction
         prompt_parts.append("# Please update memory with any important findings or decisions using the /memory command")
@@ -679,6 +754,9 @@ Please provide:
             )
             
             try:
+                # Log the process ID for debugging
+                self.logger.debug(f"Claude Code process started with PID: {process.pid}")
+                
                 stdout, stderr = await asyncio.wait_for(
                     process.communicate(), 
                     timeout=timeout

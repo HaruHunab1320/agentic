@@ -37,6 +37,8 @@ class BaseAiderAgent(Agent, LoggerMixin):
             "--no-git",  # Don't auto-commit
             "--no-fancy-input",  # Disable fancy input for automation
             "--no-show-model-warnings",  # Suppress model warnings for automation
+            "--no-auto-commits",  # Prevent git commits
+            "--no-stream",  # Disable streaming for better output capture
             f"--model={model}",
         ]
         

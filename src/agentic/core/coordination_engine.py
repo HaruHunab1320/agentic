@@ -718,8 +718,9 @@ class CoordinationEngine(LoggerMixin):
         
         # Define patterns that suggest multi-agent coordination
         multi_component_patterns = [
-            'full stack', 'complete application', 'end-to-end', 'frontend and backend',
-            'with tests', 'including tests', 'and documentation', 'with deployment',
+            'full stack', 'complete application', 'complete app', 'complete todo', 'complete web',
+            'end-to-end', 'frontend and backend', 'react frontend', 'fastapi backend',
+            'with tests', 'including tests', 'comprehensive tests', 'and documentation', 'with deployment',
             'microservices', 'multiple services', 'system', 'platform'
         ]
         
@@ -735,7 +736,7 @@ class CoordinationEngine(LoggerMixin):
             agent_tasks.append({
                 'agent_type': architect_agent_type,
                 'focus_areas': ['analysis', 'architecture', 'design'],
-                'command': f'Analyze the architecture requirements for: {command}. Create a detailed technical specification and project structure. Focus on component design, data flow, and API contracts.',
+                'command': f'Create a complete technical specification and project structure for: {command}. Create all files in the ./agentic_tests/ directory. Write actual files including README.md, project structure documentation, and API specification files. Focus on component design, data flow, and API contracts.',
                 'coordination_context': {
                     'role': 'architect',
                     'dependencies': [],
@@ -749,7 +750,7 @@ class CoordinationEngine(LoggerMixin):
             agent_tasks.append({
                 'agent_type': backend_agent_type,
                 'focus_areas': ['backend', 'api', 'database', 'authentication'],
-                'command': f'Create the backend/API components for: {command}. Implement server-side logic, database models, API endpoints, and authentication. Coordinate with frontend for API contracts.',
+                'command': f'Create complete backend/API code for: {command}. Create all files in the ./agentic_tests/ directory. Write actual Python files with FastAPI, database models, API endpoints, and authentication. Create working, runnable backend code with proper file structure.',
                 'coordination_context': {
                     'role': 'backend_developer',
                     'dependencies': ['technical_spec'],
@@ -763,7 +764,7 @@ class CoordinationEngine(LoggerMixin):
             agent_tasks.append({
                 'agent_type': frontend_agent_type,
                 'focus_areas': ['frontend', 'ui', 'components', 'styling'],
-                'command': f'Create the frontend/UI components for: {command}. Implement user interface, components, routing, and API integration. Coordinate with backend for data contracts.',
+                'command': f'Create complete frontend/UI code for: {command}. Create all files in the ./agentic_tests/ directory. Write actual React components, pages, styling, and API integration code. Create working, runnable frontend code with proper component structure.',
                 'coordination_context': {
                     'role': 'frontend_developer',
                     'dependencies': ['api_contracts', 'technical_spec'],
@@ -777,7 +778,7 @@ class CoordinationEngine(LoggerMixin):
             agent_tasks.append({
                 'agent_type': testing_agent_type,
                 'focus_areas': ['testing', 'qa', 'automation'],
-                'command': f'Create comprehensive tests for: {command}. Implement unit tests, integration tests, and end-to-end testing. Test all components and their interactions.',
+                'command': f'Create comprehensive tests for: {command}. Create all files in the ./agentic_tests/ directory. Implement unit tests, integration tests, and end-to-end testing. Test all components and their interactions.',
                 'coordination_context': {
                     'role': 'qa_engineer',
                     'dependencies': ['backend_services', 'ui_components'],
@@ -868,5 +869,14 @@ class CoordinationEngine(LoggerMixin):
         intent_classifier = IntentClassifier()
         intent = await intent_classifier.analyze_intent(command)
         task = Task.from_intent(intent, command)
+        
+        # Respect agent type strategy from context
+        agent_type_strategy = context.get('agent_type_strategy', 'dynamic')
+        if agent_type_strategy == 'claude':
+            task.agent_type_hint = 'claude_code'
+        elif agent_type_strategy == 'aider':
+            # Default to backend for general commands
+            task.agent_type_hint = 'aider_backend'
+        # For 'dynamic' and 'mixed', let the system decide based on the command
         
         return await self.execute_coordinated_tasks([task]) 
