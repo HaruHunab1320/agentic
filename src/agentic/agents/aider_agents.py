@@ -24,7 +24,14 @@ class BaseAiderAgent(Agent, LoggerMixin):
         LoggerMixin.__init__(self)
         self.aider_process: Optional[subprocess.Popen] = None
         self.aider_args: List[str] = []
+        self._monitor = None
+        self._monitor_agent_id = None
         self._setup_aider_args()
+    
+    def set_monitor(self, monitor, agent_id: str):
+        """Set the swarm monitor for status updates"""
+        self._monitor = monitor
+        self._monitor_agent_id = agent_id
     
     def _setup_aider_args(self) -> None:
         """Setup common Aider arguments"""
@@ -38,7 +45,7 @@ class BaseAiderAgent(Agent, LoggerMixin):
             "--no-fancy-input",  # Disable fancy input for automation
             "--no-show-model-warnings",  # Suppress model warnings for automation
             "--no-auto-commits",  # Prevent git commits
-            "--no-stream",  # Disable streaming for better output capture
+            # "--no-stream",  # Commented out to enable real-time progress updates
             f"--model={model}",
         ]
         
@@ -449,7 +456,7 @@ class BaseAiderAgent(Agent, LoggerMixin):
         """Build specialized message based on agent type and expertise"""
         base_message = f"You are a {self.agent_type.value} agent specializing in: {', '.join(self.focus_areas)}.\n\n"
         
-        # Add task
+        # Trust Aider to understand the task naturally
         base_message += f"Task: {task.command}\n\n"
         
         # Add specialized context based on agent type
@@ -503,6 +510,23 @@ Prioritize working with these file patterns:
     async def _execute_aider_with_session_management(self, cmd: List[str], env: dict, task: Task) -> TaskResult:
         """Execute Aider with better session management and output parsing"""
         try:
+            # Update monitor status if available
+            if self._monitor and self._monitor_agent_id:
+                from agentic.core.swarm_monitor import AgentStatus
+                self._monitor.update_agent_status(self._monitor_agent_id, AgentStatus.ANALYZING, "Starting Aider session...")
+                
+                # Add specific activity based on task type
+                command_lower = task.command.lower()
+                if hasattr(self._monitor, 'update_agent_activity'):
+                    if 'test' in command_lower:
+                        self._monitor.update_agent_activity(self._monitor_agent_id, "Analyzing test requirements...")
+                    elif 'create' in command_lower or 'add' in command_lower:
+                        self._monitor.update_agent_activity(self._monitor_agent_id, "Planning implementation...")
+                    elif 'fix' in command_lower or 'debug' in command_lower:
+                        self._monitor.update_agent_activity(self._monitor_agent_id, "Analyzing code issues...")
+                    else:
+                        self._monitor.update_agent_activity(self._monitor_agent_id, "Processing task...")
+            
             # Execute the command with proper stdin handling
             process = await asyncio.create_subprocess_exec(
                 *cmd,
@@ -513,15 +537,76 @@ Prioritize working with these file patterns:
                 cwd=str(self.workspace_path)
             )
             
-            stdout, stderr = await process.communicate(input=b'')
-            output = stdout.decode('utf-8', errors='replace')
-            error_output = stderr.decode('utf-8', errors='replace')
+            # Update monitor to executing
+            if self._monitor and self._monitor_agent_id:
+                self._monitor.update_agent_status(self._monitor_agent_id, AgentStatus.EXECUTING, task.command[:50] + "...")
+                if hasattr(self._monitor, 'update_agent_activity'):
+                    self._monitor.update_agent_activity(self._monitor_agent_id, "Aider is processing...")
+            
+            # For test tasks, monitor output in real-time
+            command_lower = task.command.lower()
+            if 'test' in command_lower or 'tests' in command_lower:
+                # Read output streams in real-time
+                stdout_data = []
+                stderr_data = []
+                
+                async def read_stream(stream, data_list, stream_name):
+                    while True:
+                        line = await stream.readline()
+                        if not line:
+                            break
+                        data_list.append(line)
+                        
+                        # Parse and report activities
+                        if self._monitor and self._monitor_agent_id and hasattr(self._monitor, 'update_agent_activity'):
+                            line_text = line.decode('utf-8', errors='replace').strip()
+                            if line_text:
+                                # Detect specific Aider activities
+                                if 'git ls-files' in line_text:
+                                    self._monitor.update_agent_activity(self._monitor_agent_id, "Scanning project files...")
+                                elif 'repo-map' in line_text:
+                                    self._monitor.update_agent_activity(self._monitor_agent_id, "Building repository map...")
+                                elif 'Applied edit to' in line_text:
+                                    self._monitor.update_agent_activity(self._monitor_agent_id, f"Editing: {line_text}")
+                                elif 'Created' in line_text:
+                                    self._monitor.update_agent_activity(self._monitor_agent_id, f"Creating: {line_text}")
+                                elif 'Tokens:' in line_text:
+                                    self._monitor.update_agent_activity(self._monitor_agent_id, "Processing AI response...")
+                                elif 'test' in line_text.lower() and ('pass' in line_text.lower() or 'fail' in line_text.lower()):
+                                    self._monitor.update_agent_activity(self._monitor_agent_id, line_text[:60])
+                
+                # Read both streams concurrently
+                await asyncio.gather(
+                    read_stream(process.stdout, stdout_data, "stdout"),
+                    read_stream(process.stderr, stderr_data, "stderr"),
+                    process.wait()
+                )
+                
+                output = b''.join(stdout_data).decode('utf-8', errors='replace')
+                error_output = b''.join(stderr_data).decode('utf-8', errors='replace')
+            else:
+                # Normal execution for non-test tasks
+                stdout, stderr = await process.communicate(input=b'')
+                output = stdout.decode('utf-8', errors='replace')
+                error_output = stderr.decode('utf-8', errors='replace')
             
             # Parse Aider output for better result reporting
             success, parsed_output = self._parse_aider_output(output, error_output, process.returncode)
             
             if success:
                 self.logger.info("Task completed successfully")
+                
+                # Update monitor status to completed if available
+                if self._monitor and self._monitor_agent_id:
+                    from agentic.core.swarm_monitor import AgentStatus
+                    self._monitor.update_agent_status(self._monitor_agent_id, AgentStatus.FINALIZING)
+                    if hasattr(self._monitor, 'update_agent_activity'):
+                        self._monitor.update_agent_activity(self._monitor_agent_id, "Task completed successfully")
+                    # Give a moment for finalization
+                    await asyncio.sleep(0.5)
+                    self._monitor.update_agent_status(self._monitor_agent_id, AgentStatus.COMPLETED)
+                    # Note: Enhanced monitor calculates progress automatically from task completion
+                
                 return TaskResult(
                     task_id=task.id,
                     status="completed",
@@ -530,6 +615,14 @@ Prioritize working with these file patterns:
                 )
             else:
                 self.logger.error(f"Task failed: {parsed_output}")
+                
+                # Update monitor status to failed if available
+                if self._monitor and self._monitor_agent_id:
+                    from agentic.core.swarm_monitor import AgentStatus
+                    self._monitor.update_agent_status(self._monitor_agent_id, AgentStatus.FAILED)
+                    if hasattr(self._monitor, 'update_agent_activity'):
+                        self._monitor.update_agent_activity(self._monitor_agent_id, f"Task failed: {parsed_output[:50]}...")
+                
                 return TaskResult(
                     task_id=task.id,
                     status="failed",
@@ -625,7 +718,7 @@ Prioritize working with these file patterns:
             specializations=self.config.focus_areas,
             supported_languages=["python", "javascript", "typescript", "go", "rust", "java"],
             max_context_tokens=self.config.max_tokens,
-            concurrent_tasks=1,
+            concurrent_tasks=100,  # Unlimited parallelism for swarm execution
             reasoning_capability=True,
             file_editing_capability=True,
             code_execution_capability=False  # Aider doesn't execute code directly

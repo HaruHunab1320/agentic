@@ -28,6 +28,7 @@ from agentic.core.ide_integration import (
     create_ide_command_from_selection,
     IDECommand
 )
+from agentic.agents.output_parser import AgentOutputParser
 
 console = Console()
 
@@ -41,7 +42,7 @@ def print_banner() -> None:
     console.print(Panel(banner_text.strip(), border_style="blue"))
 
 
-@click.group()
+@click.group(invoke_without_command=True)
 @click.option("--debug", is_flag=True, help="Enable debug logging")
 @click.version_option(version="1.0.0", prog_name="agentic")
 @click.pass_context
@@ -58,6 +59,19 @@ def cli(ctx: click.Context, debug: bool):
     
     if debug:
         logger.debug("Debug mode enabled")
+    
+    # If no command is provided, launch interactive chat mode
+    if ctx.invoked_subcommand is None:
+        print_banner()
+        from agentic.core.chat_interface import ChatInterface
+        chat = ChatInterface(workspace_path=Path.cwd(), debug=debug)
+        try:
+            asyncio.run(chat.run())
+        except KeyboardInterrupt:
+            console.print("\n[yellow]👋 Goodbye![/yellow]")
+        except Exception as e:
+            console.print(f"[red]❌ Error: {e}[/red]")
+            sys.exit(1)
 
 
 @cli.command()
@@ -318,28 +332,107 @@ def exec(ctx: click.Context, command: tuple, agent: str, context: str):
                     console.print("[red]❌ Failed to initialize orchestrator[/red]")
                     return
             
-            # Execute command
-            with Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                console=console,
-                transient=True
-            ) as progress:
-                task = progress.add_task("Processing command...", total=None)
-                
+            # Parse context if provided
+            exec_context = {}
+            if context:
                 try:
-                    result = await orchestrator.execute_command(
-                        command=command_str,
-                        context=context
-                    )
-                    progress.remove_task(task)
+                    import json
+                    exec_context = json.loads(context)
+                except:
+                    exec_context = {"additional_info": context}
+            
+            # Enable monitoring by default
+            exec_context['enable_monitoring'] = True
+            
+            # Check if we should use progress spinner or monitor
+            use_progress_spinner = os.environ.get('AGENTIC_NO_MONITOR') == '1'
+            
+            if use_progress_spinner:
+                # Use progress spinner when monitor is disabled
+                with Progress(
+                    SpinnerColumn(),
+                    TextColumn("[progress.description]{task.description}"),
+                    console=console,
+                    transient=True
+                ) as progress:
+                    task = progress.add_task("Processing command...", total=None)
+                    
+                    try:
+                        result = await orchestrator.execute_command(
+                            command=command_str,
+                            context=exec_context
+                        )
+                        progress.remove_task(task)
+                    
+                    except Exception as e:
+                        progress.remove_task(task)
+                        logger.error(f"Command execution failed: {e}")
+                        console.print(f"[bold red]❌ Execution failed: {e}[/bold red]")
+                        raise
                     
                     if result and result.status == "completed":
                         console.print("[bold green]✅ Command executed successfully![/bold green]")
                         
                         # Display results
                         if result.output:
-                            console.print(f"\n[bold]Output:[/bold]\n{result.output}")
+                            # Check if output is Claude Code JSON
+                            if result.output.strip().startswith('{') and hasattr(result, 'agent_id') and 'claude' in str(result.agent_id).lower():
+                                # Use output parser for Claude agents
+                                parser = AgentOutputParser()
+                                parsed = parser.parse_output(result.output, 'claude_code')
+                                
+                                # Show the summary/answer
+                                if parsed['summary']:
+                                    console.print(f"\n[bold]Answer:[/bold]")
+                                    console.print(parsed['summary'])
+                                
+                                # Show key actions if any
+                                if parsed['actions']:
+                                    console.print(f"\n[dim]Actions taken: {', '.join(parsed['actions'][:3])}")
+                                    if len(parsed['actions']) > 3:
+                                        console.print(f"... and {len(parsed['actions']) - 3} more actions[/dim]")
+                            else:
+                                # Plain text output
+                                console.print(f"\n[bold]Output:[/bold]\n{result.output}")
+                        
+                        if result.agent_id:
+                            console.print(f"\n[dim]Agent used: {result.agent_id}[/dim]")
+                            
+                    else:
+                        error_msg = result.error if result and result.error else 'No result returned or task failed'
+                        console.print(f"[bold red]❌ Command failed: {error_msg}[/bold red]")
+            else:
+                # No progress spinner when monitor is active
+                try:
+                    result = await orchestrator.execute_command(
+                        command=command_str,
+                        context=exec_context
+                    )
+                    
+                    if result and result.status == "completed":
+                        console.print("[bold green]✅ Command executed successfully![/bold green]")
+                        
+                        # Display results
+                        if result.output:
+                            # Check if output is Claude Code JSON
+                            if result.output.strip().startswith('{') and hasattr(result, 'agent_id') and 'claude' in str(result.agent_id).lower():
+                                # Use output parser for Claude agents
+                                parser = AgentOutputParser()
+                                parsed = parser.parse_output(result.output, 'claude_code')
+                                
+                                # Show the summary/answer
+                                if parsed['summary']:
+                                    console.print(f"\n[bold]Answer:[/bold]")
+                                    console.print(parsed['summary'])
+                                
+                                # Show key actions if any
+                                if parsed['actions']:
+                                    console.print(f"\n[dim]Actions taken: {', '.join(parsed['actions'][:3])}")
+                                    if len(parsed['actions']) > 3:
+                                        console.print(f"... and {len(parsed['actions']) - 3} more actions[/dim]")
+                            else:
+                                # Plain text output
+                                console.print(f"\n[bold]Output:[/bold]\n{result.output}")
                         
                         if result.agent_id:
                             console.print(f"\n[dim]Agent used: {result.agent_id}[/dim]")
@@ -349,7 +442,6 @@ def exec(ctx: click.Context, command: tuple, agent: str, context: str):
                         console.print(f"[bold red]❌ Command failed: {error_msg}[/bold red]")
                         
                 except Exception as e:
-                    progress.remove_task(task)
                     logger.error(f"Command execution failed: {e}")
                     console.print(f"[bold red]❌ Execution failed: {e}[/bold red]")
         
@@ -359,6 +451,35 @@ def exec(ctx: click.Context, command: tuple, agent: str, context: str):
         logger.error(f"Exec command failed: {e}")
         console.print(f"[bold red]❌ Error: {e}[/bold red]")
         raise click.ClickException(str(e))
+
+
+@cli.command("chat")
+@click.option('--model', '-m', help='Override default AI model')
+@click.option('--agent-type', '-t', 
+              type=click.Choice(['claude', 'aider', 'dynamic', 'mixed']),
+              default='dynamic',
+              help='Default agent type strategy')
+@click.pass_context
+def chat(ctx: click.Context, model: Optional[str], agent_type: str):
+    """Launch interactive chat mode"""
+    debug = ctx.obj.get('debug', False)
+    
+    # Launch the same chat interface as when running 'agentic' alone
+    from agentic.core.chat_interface import ChatInterface
+    chat_interface = ChatInterface(workspace_path=Path.cwd(), debug=debug)
+    
+    # Store preferences
+    if model:
+        chat_interface.default_model = model
+    chat_interface.default_agent_type = agent_type
+    
+    try:
+        asyncio.run(chat_interface.run())
+    except KeyboardInterrupt:
+        console.print("\n[yellow]👋 Goodbye![/yellow]")
+    except Exception as e:
+        console.print(f"[red]❌ Error: {e}[/red]")
+        sys.exit(1)
 
 
 @cli.command()
@@ -1220,13 +1341,15 @@ def comm_status(ctx: click.Context):
 @click.argument("command", nargs=-1, required=True)
 @click.option("--context", help="Additional context for the command")
 @click.option("--agent-type", "-t", 
-              type=click.Choice(["claude", "aider", "dynamic", "mixed"]), 
+              type=click.Choice(["claude", "aider", "dynamic", "mixed", "enhanced"]), 
               default="dynamic", 
-              help="Agent type strategy: claude (all Claude Code), aider (all Aider), dynamic (intelligent mix), mixed (force both types)")
+              help="Agent type strategy: claude (all Claude Code), aider (all Aider), dynamic (intelligent mix), mixed (force both types), enhanced (ML-based selection)")
 @click.option("--track-metrics", "-m", is_flag=True, 
               help="Track performance metrics for agent comparison")
+@click.option("--analyze-only", "-a", is_flag=True,
+              help="Only analyze the task without executing (shows agent selection reasoning)")
 @click.pass_context
-def exec_multi(ctx: click.Context, command: tuple, context: str, agent_type: str, track_metrics: bool):
+def exec_multi(ctx: click.Context, command: tuple, context: str, agent_type: str, track_metrics: bool, analyze_only: bool):
     """Execute a command using multiple coordinated agents (Claude Code + Aider agents)"""
     
     logger = ctx.obj['logger']
@@ -1254,6 +1377,47 @@ def exec_multi(ctx: click.Context, command: tuple, context: str, agent_type: str
                 if not success:
                     console.print("[red]❌ Failed to initialize orchestrator[/red]")
                     return
+            
+            # If analyze-only mode, perform analysis and exit
+            if analyze_only:
+                console.print("\n[bold cyan]🔍 Task Analysis Mode[/bold cyan]")
+                
+                # Import and use the task analyzer
+                from agentic.core.task_analyzer import TaskAnalyzer
+                analyzer = TaskAnalyzer()
+                
+                # Analyze the task
+                analysis = await analyzer.analyze_task(command_str)
+                
+                # Display analysis results
+                from rich.table import Table
+                
+                table = Table(title="Task Analysis Results")
+                table.add_column("Property", style="cyan", width=25)
+                table.add_column("Value", style="green")
+                
+                table.add_row("Command", command_str[:50] + "..." if len(command_str) > 50 else command_str)
+                table.add_row("Estimated Files", str(analysis.file_count_estimate))
+                table.add_row("Complexity Score", f"{analysis.complexity_score:.2f}")
+                table.add_row("Requires Creativity", "Yes" if analysis.requires_creativity else "No")
+                table.add_row("Follows Pattern", "Yes" if analysis.follows_pattern else "No")
+                table.add_row("Ambiguity Level", f"{analysis.ambiguity_level:.2f}")
+                table.add_row("Bulk Operation", "Yes" if analysis.bulk_operation else "No")
+                table.add_row("Operation Type", analysis.operation_type)
+                table.add_row("Suggested Agent", analysis.suggested_agent)
+                
+                console.print(table)
+                
+                if analysis.complexity_indicators:
+                    console.print(f"\n[bold]Complexity Indicators:[/bold] {', '.join(analysis.complexity_indicators)}")
+                
+                if analysis.reasoning:
+                    console.print("\n[bold]Selection Reasoning:[/bold]")
+                    for reason in analysis.reasoning:
+                        console.print(f"  • {reason}")
+                
+                console.print(f"\n[bold]Recommendation:[/bold] Use {analysis.suggested_agent} for this task")
+                return
             
             # Execute multi-agent command
             with Progress(

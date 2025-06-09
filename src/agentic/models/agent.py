@@ -83,6 +83,7 @@ class AgentSession(BaseModel):
     workspace: Path = Field(description="Session workspace path")
     created_at: datetime = Field(default_factory=datetime.utcnow, description="Session creation time")
     last_activity: Optional[datetime] = Field(default=None, description="Last activity timestamp")
+    error: Optional[str] = Field(default=None, description="Error message if session failed")
     
     def mark_active(self) -> None:
         """Mark session as active"""
@@ -118,6 +119,8 @@ class Agent(ABC):
     def __init__(self, config: AgentConfig):
         self.config = config
         self.session: Optional[AgentSession] = None
+        self._monitor = None
+        self._monitor_agent_id = None
     
     @abstractmethod
     async def start(self) -> bool:
@@ -150,6 +153,21 @@ class Agent(ABC):
         yield f"Starting task: {task.command}"
         result = await self.execute_task(task)
         yield f"Completed task: {result.status}"
+    
+    def set_monitor(self, monitor, agent_id: str) -> None:
+        """Set monitoring instance for status updates"""
+        self._monitor = monitor
+        self._monitor_agent_id = agent_id
+    
+    def report_status(self, status: str, message: Optional[str] = None) -> None:
+        """Report status to monitor if available"""
+        if self._monitor and self._monitor_agent_id:
+            try:
+                from agentic.core.swarm_monitor import AgentStatus
+                status_enum = AgentStatus(status)
+                self._monitor.update_agent_status(self._monitor_agent_id, status_enum, message)
+            except Exception:
+                pass  # Don't let monitoring errors affect execution
     
     def can_handle_task(self, task: Task) -> bool:
         """Check if this agent can handle the given task"""

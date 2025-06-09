@@ -37,7 +37,9 @@ class IntentClassifier:
         
         self.test_keywords = {
             "test", "spec", "unit test", "integration test", "e2e", "testing",
-            "coverage", "verify", "validate", "check", "assert"
+            "coverage", "verify", "validate", "check", "assert", "tests", 
+            "passing", "failing", "pass", "fail", "run tests", "test suite",
+            "pytest", "jest", "mocha", "jasmine"
         }
         
         # Keywords for different areas

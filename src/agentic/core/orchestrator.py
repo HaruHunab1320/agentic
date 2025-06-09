@@ -49,6 +49,7 @@ class Orchestrator(LoggerMixin):
         # State
         self._project_structure: Optional[ProjectStructure] = None
         self._is_initialized = False
+        self._background_task: Optional[asyncio.Task] = None
     
     async def initialize(self, project_path: Optional[Path] = None) -> bool:
         """Initialize the orchestrator with project analysis"""
@@ -71,7 +72,7 @@ class Orchestrator(LoggerMixin):
             await self.agent_registry.initialize()
             
             # Start background tasks
-            asyncio.create_task(self._background_maintenance())
+            self._background_task = asyncio.create_task(self._background_maintenance())
             
             self._is_initialized = True
             self.logger.info("Orchestrator initialization complete")
@@ -88,7 +89,14 @@ class Orchestrator(LoggerMixin):
         
         self.logger.info(f"Executing command: {command[:50]}...")
         
+        # Determine if we should show monitoring
+        should_monitor = context and context.get('enable_monitoring', True)
+        status_updater = context.get('status_updater') if context else None
+        
         try:
+            # Start monitoring if enabled
+            if should_monitor and hasattr(self, 'coordination_engine') and hasattr(self.coordination_engine, 'swarm_monitor'):
+                await self.coordination_engine.swarm_monitor.start_monitoring()
             # Classify intent
             intent = await self.intent_classifier.analyze_intent(command)
             self.logger.debug(f"Classified intent: {intent.task_type}")
@@ -137,9 +145,79 @@ class Orchestrator(LoggerMixin):
                     error="Agent instance not found"
                 )
             
+            # Register agent with monitor if monitoring is enabled
+            if should_monitor and hasattr(self, 'coordination_engine') and hasattr(self.coordination_engine, 'swarm_monitor'):
+                monitor = self.coordination_engine.swarm_monitor
+                from agentic.core.swarm_monitor import AgentStatus
+                
+                # Determine a meaningful role based on agent type and task
+                if "test" in command.lower():
+                    role = "test_runner"
+                elif "claude" in best_agent.agent_config.agent_type.value.lower():
+                    role = "analyzer"
+                elif "frontend" in best_agent.agent_config.agent_type.value.lower():
+                    role = "frontend_dev"
+                elif "backend" in best_agent.agent_config.agent_type.value.lower():
+                    role = "backend_dev"
+                else:
+                    role = best_agent.agent_config.agent_type.value.replace("_", " ").title()
+                
+                # Register agent with monitor
+                monitor.register_agent(
+                    agent_id=best_agent.id,
+                    agent_name=best_agent.agent_config.name,
+                    agent_type=best_agent.agent_config.agent_type.value,
+                    role=role
+                )
+                monitor.update_agent_status(best_agent.id, AgentStatus.INITIALIZING)
+                
+                # Set monitor reference in agent for status updates
+                if hasattr(agent_instance, 'set_monitor'):
+                    agent_instance.set_monitor(monitor, best_agent.id)
+            
+            # Set up simple progress monitor if we have a status updater but no full monitoring
+            simple_monitor = None
+            if not should_monitor and status_updater:
+                from agentic.core.simple_progress import SimpleProgressMonitor
+                simple_monitor = SimpleProgressMonitor(status_updater)
+                simple_monitor.start_monitoring(best_agent.id, best_agent.agent_config.name)
+                
+                # Give agent a reference to update progress
+                if hasattr(agent_instance, 'set_progress_monitor'):
+                    agent_instance.set_progress_monitor(simple_monitor)
+            
             # Register task and execute
             await self.shared_memory.register_task(task)
+            
+            # Update monitor - starting task
+            if should_monitor and hasattr(self, 'coordination_engine') and hasattr(self.coordination_engine, 'swarm_monitor'):
+                monitor = self.coordination_engine.swarm_monitor
+                monitor.update_agent_status(best_agent.id, AgentStatus.SETTING_UP)
+                
+                # Use appropriate method based on monitor type
+                if hasattr(monitor, 'start_agent_task'):
+                    monitor.start_agent_task(best_agent.id, task.id, task.command[:50] + "...")
+                else:
+                    monitor.start_task(best_agent.id, task.id, task.command[:50] + "...")
+            
             result = await agent_instance.execute_task(task)
+            
+            # Update monitor - task completed
+            if should_monitor and hasattr(self, 'coordination_engine') and hasattr(self.coordination_engine, 'swarm_monitor'):
+                monitor = self.coordination_engine.swarm_monitor
+                is_success = result.status == "completed"
+                
+                # Use appropriate method based on monitor type
+                if hasattr(monitor, 'complete_agent_task'):
+                    monitor.complete_agent_task(best_agent.id, task.id, is_success)
+                else:
+                    monitor.complete_task(best_agent.id, task.id, is_success)
+                
+                if is_success:
+                    monitor.update_agent_status(best_agent.id, AgentStatus.COMPLETED)
+                else:
+                    monitor.update_agent_status(best_agent.id, AgentStatus.FAILED)
+            
             await self.shared_memory.complete_task(task.id, result)
             
             return result
@@ -153,6 +231,14 @@ class Orchestrator(LoggerMixin):
                 output="",
                 error=str(e)
             )
+        finally:
+            # Stop monitoring if it was started
+            if should_monitor and hasattr(self, 'coordination_engine') and hasattr(self.coordination_engine, 'swarm_monitor'):
+                await self.coordination_engine.swarm_monitor.stop_monitoring()
+            
+            # Stop simple monitor if it was started
+            if 'simple_monitor' in locals() and simple_monitor:
+                await simple_monitor.stop_monitoring()
     
     async def execute_execution_plan(self, plan: ExecutionPlan) -> ExecutionResult:
         """Execute a multi-task execution plan with coordination"""
@@ -533,6 +619,15 @@ class Orchestrator(LoggerMixin):
         self.logger.info("Shutting down orchestrator...")
         
         try:
+            # Cancel the background maintenance task first
+            if self._background_task and not self._background_task.done():
+                self._background_task.cancel()
+                try:
+                    await self._background_task
+                except asyncio.CancelledError:
+                    pass
+                self.logger.debug("Cancelled background maintenance task")
+            
             # Cancel all background tasks
             background_tasks = self.get_all_background_tasks()
             for task_id in background_tasks:

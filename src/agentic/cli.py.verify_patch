@@ -1,0 +1,51 @@
+# Add this to the cli.py file to create a /verify command
+
+async def handle_verify_command(orchestrator):
+    """Handle the /verify command to run verification"""
+    console = Console()
+    
+    try:
+        console.print("[yellow]🧪 Running verification checks...[/yellow]")
+        
+        # Import verification coordinator
+        from agentic.core.verification_coordinator import VerificationCoordinator
+        
+        # Create verifier
+        verifier = VerificationCoordinator(orchestrator.workspace_path)
+        
+        # Run verification
+        result = await verifier.verify_system()
+        
+        # Display results
+        console.print("\n[bold]Verification Results:[/bold]")
+        
+        if result.success:
+            console.print("[green]✅ All verifications passed![/green]")
+        else:
+            console.print("[red]❌ Verification failed[/red]")
+        
+        # Show test results
+        for test_type, test_result in result.test_results.items():
+            if test_result.passed:
+                console.print(f"  ✓ {test_type}: {test_result.passed_tests}/{test_result.total_tests} passed")
+            else:
+                console.print(f"  ✗ {test_type}: {test_result.failed_tests} failed")
+                if test_result.errors:
+                    console.print(f"    Errors: {test_result.errors[0]}")
+        
+        # Show system health
+        console.print("\n[bold]System Health:[/bold]")
+        for check, healthy in result.system_health.items():
+            status = "✓" if healthy else "✗"
+            console.print(f"  {status} {check}")
+        
+        # If failed, offer to run fixes
+        if not result.success:
+            console.print("\n[yellow]Would you like to automatically fix these issues?[/yellow]")
+            console.print("Type 'fix' to run automated fixes, or press Enter to skip")
+            
+    except Exception as e:
+        console.print(f"[red]Verification error: {e}[/red]")
+
+# Add to command handlers in InteractiveCLI
+# '/verify': lambda: handle_verify_command(self.orchestrator),

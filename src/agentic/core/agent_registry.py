@@ -49,6 +49,8 @@ class AgentRegistry(LoggerMixin):
     
     async def get_or_spawn_agent(self, config: AgentConfig) -> AgentSession:
         """Get an existing agent session or spawn a new one if needed"""
+        self.logger.info(f"get_or_spawn_agent called for {config.agent_type} agent '{config.name}'")
+        
         # First, try to find an available agent of the same type
         available_session = self._find_available_agent(config.agent_type, config.focus_areas)
         
@@ -57,6 +59,7 @@ class AgentRegistry(LoggerMixin):
             return available_session
         
         # No suitable agent found, spawn a new one
+        self.logger.info(f"No existing {config.agent_type} agent found, spawning new one")
         return await self.spawn_agent(config)
     
     async def spawn_agent(self, config: AgentConfig) -> AgentSession:
@@ -82,13 +85,16 @@ class AgentRegistry(LoggerMixin):
                 self.active_sessions[session.id] = session
                 self.agents[session.id] = agent
                 agent.session = session
-                self.logger.info(f"Agent {config.name} started successfully")
+                self.logger.info(f"Agent {config.name} started successfully with session ID: {session.id}")
+                self.logger.info(f"Agent registered in agents dict: {session.id} -> {agent}")
             else:
                 session.mark_error("Failed to start agent")
                 self.logger.error(f"Failed to start agent {config.name}")
+                # Don't add to agents dict if start failed
         except Exception as e:
             session.mark_error(str(e))
             self.logger.error(f"Error starting agent {config.name}: {e}")
+            # Don't add to agents dict if exception occurred
         
         return session
     
@@ -193,6 +199,13 @@ class AgentRegistry(LoggerMixin):
     def get_session_by_id(self, session_id: str) -> Optional[AgentSession]:
         """Get agent session by ID"""
         return self.active_sessions.get(session_id)
+    
+    @classmethod
+    def _get_agent_instance(cls, session_id: str) -> Optional[Agent]:
+        """Class method to get agent instance (for autonomous executor)"""
+        # This is a workaround - in production, pass the registry instance
+        # For now, we'll need to refactor autonomous executor to receive registry
+        return None
     
     async def get_agent_status(self) -> Dict[str, Dict]:
         """Get status of all agents"""

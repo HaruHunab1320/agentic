@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:80"
+    volumes:
+      - ./backend/app:/app
+    environment:
+      # Add any environment variables your backend needs
+      # EXAMPLE_ENV_VAR: example_value
+      PYTHONUNBUFFERED: 1 # Recommended for seeing logs in real-time
+    # command: uvicorn app.main:app --host 0.0.0.0 --port 80 --reload # Use this for development with auto-reload
+
+  # Placeholder for frontend service
+  # frontend:
+  #   build: ./frontend
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./frontend/src:/app/src # Mount src for hot-reloading if applicable
+  #   depends_on:
+  #     - backend
+
+  # Placeholder for database service
+  # db:
+  #   image: postgres:13
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data/
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     POSTGRES_USER: user
+  #     POSTGRES_PASSWORD: password
+  #     POSTGRES_DB: todo_db
+
+# volumes:
+#   postgres_data:

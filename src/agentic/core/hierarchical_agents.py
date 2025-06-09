@@ -521,7 +521,7 @@ class SpecialistAgent(Agent):
         self.domain = domain
         self.worker_agents: List[Agent] = []
         self.load_balancer = LoadBalancer()
-        self.max_workers = 5
+        self.max_workers = 100  # Allow massive swarms for lightning-fast development
         self.agent_spawner = DynamicAgentSpawner(
             AgentRegistry(config.workspace_path),
             None  # TODO: Pass ResourceManager when available

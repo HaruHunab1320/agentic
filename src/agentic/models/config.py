@@ -14,6 +14,16 @@ from agentic.models.agent import AgentConfig, AgentType
 from agentic.models.project import ProjectStructure
 
 
+class ClaudeCodeConfig(BaseModel):
+    """Claude Code specific configuration"""
+    theme: str = Field(default="dark", description="Claude Code theme preference (dark/light)")
+    setup_option: int = Field(default=1, description="Default option for Claude Code setup prompts")
+    auto_setup: bool = Field(default=True, description="Automatically handle Claude Code setup wizard")
+    accept_security_notes: bool = Field(default=True, description="Automatically accept security notes")
+    use_recommended_terminal: bool = Field(default=True, description="Use recommended terminal settings")
+    trust_workspace: bool = Field(default=True, description="Automatically trust workspace folder")
+
+
 class AgenticConfig(BaseModel):
     """Main configuration for Agentic workspace"""
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -52,6 +62,9 @@ class AgenticConfig(BaseModel):
     # Logging
     log_level: str = Field(default="INFO", description="Logging level")
     log_file: Optional[Path] = Field(default=None, description="Log file path")
+    
+    # Claude Code configuration
+    claude_code_config: ClaudeCodeConfig = Field(default_factory=ClaudeCodeConfig, description="Claude Code specific settings")
     
     def save_to_yaml(self, path: Path) -> None:
         """Save configuration to YAML file"""

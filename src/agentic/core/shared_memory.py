@@ -43,6 +43,9 @@ class SharedMemory(LoggerMixin):
         # Agent status tracking
         self._agent_status: Dict[str, Dict[str, Any]] = {}
         self._agent_heartbeats: Dict[str, datetime] = {}
+        
+        # Monitoring callbacks for real-time updates
+        self._monitoring_callbacks: Dict[str, Any] = {}
     
     # Project Structure Management
     def set_project_structure(self, structure: ProjectStructure) -> None:
@@ -256,7 +259,10 @@ class SharedMemory(LoggerMixin):
             del self._task_progress[task_id]
             cleaned_count += 1
         
-        self.logger.info(f"Cleaned up {cleaned_count} old completed tasks")
+        # Only log if we actually cleaned something
+        if cleaned_count > 0:
+            self.logger.info(f"Cleaned up {cleaned_count} old completed tasks")
+        
         return cleaned_count
     
     def cleanup_old_messages(self, older_than_hours: int = 1) -> int:
