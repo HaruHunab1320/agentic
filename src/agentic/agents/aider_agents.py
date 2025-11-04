@@ -6,8 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import subprocess
-from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 import os
 import re
 
@@ -403,6 +402,9 @@ class BaseAiderAgent(Agent, LoggerMixin):
         # Core Aider flags for automation
         cmd.extend(["--yes-always", "--no-git"])
         
+        # Use whole edit format to enable file creation
+        cmd.extend(["--edit-format", "whole"])
+        
         # Set model based on agent configuration
         if hasattr(self, 'ai_model_config') and self.ai_model_config.get('model'):
             model = self.ai_model_config['model']
@@ -417,19 +419,87 @@ class BaseAiderAgent(Agent, LoggerMixin):
             # Default to Gemini 2.5 Pro for Aider agents
             cmd.extend(["--model", "gemini-2.5-pro"])
         
+        # Check if this is an exploration/analysis task
+        exploration_keywords = ['examine', 'analyze', 'explore', 'review', 'understand', 
+                               'familiarize', 'inspect', 'current state', 'codebase',
+                               'architecture', 'list files', 'what files', 'show me']
+        is_exploration = any(keyword in task.command.lower() for keyword in exploration_keywords)
+        
         # Add target files if we found any (following Aider best practices)
         if target_files:
             # Only add files that likely need editing, not extra context files
             relevant_files = [f for f in target_files if self._is_likely_edit_target(f, task.command)]
             if relevant_files:
                 cmd.extend(relevant_files)
+        elif is_exploration:
+            # For exploration tasks, add read-only access to key project files
+            self.logger.info("Detected exploration task - adding read-only file access")
+            
+            # Use --read flag for exploration without editing
+            from pathlib import Path
+            
+            # Find common project files to give context
+            workspace_path = Path(self.workspace_path)
+            
+            # Look for README files
+            for readme_pattern in ['README.md', 'README.rst', 'README.txt', 'readme.md']:
+                readme_path = workspace_path / readme_pattern
+                if readme_path.exists():
+                    cmd.extend(['--read', str(readme_path)])
+                    break
+            
+            # Add package/project configuration files
+            config_files = ['package.json', 'tsconfig.json', 'pyproject.toml', 
+                           'setup.py', 'requirements.txt', 'go.mod', 'Cargo.toml']
+            for config_file in config_files:
+                config_path = workspace_path / config_file
+                if config_path.exists():
+                    cmd.extend(['--read', str(config_path)])
+            
+            # Add source directory structure overview
+            src_patterns = ['src', 'lib', 'app', 'packages']
+            for src_pattern in src_patterns:
+                src_dir = workspace_path / src_pattern
+                if src_dir.exists() and src_dir.is_dir():
+                    # Add a few key files from source directory
+                    for ext in ['*.ts', '*.js', '*.py', '*.go', '*.rs']:
+                        files = list(src_dir.glob(f'**/{ext}'))[:5]  # Limit to 5 files per type
+                        for f in files:
+                            cmd.extend(['--read', str(f)])
         
         # Build specialized message based on agent type and task
         message = self._build_specialized_message(task)
         cmd.extend(["--message", message])
         
-        # Add exit flag to prevent hanging
-        cmd.extend(["--exit"])
+        # Add exit flag to prevent hanging (except for finalizer tasks)
+        # Check role from coordination context
+        role = ''
+        if hasattr(task, 'coordination_context') and task.coordination_context:
+            role = task.coordination_context.get('role', '')
+        
+        # These roles need to run shell commands
+        is_finalizer = role == 'finalizer'
+        is_qa_runner = role == 'qa_engineer'
+        is_architect = role == 'architect'
+        
+        # Also check command content for keywords that require shell execution
+        if not any([is_finalizer, is_qa_runner, is_architect]):
+            command_lower = task.command.lower()
+            
+            finalization_keywords = ['npm install', 'finalize', 'setup', 'installation commands']
+            is_finalizer = any(keyword in command_lower for keyword in finalization_keywords)
+            
+            test_run_keywords = ['run the test', 'execute the test', 'npm test', 'jest', 'vitest']
+            is_qa_runner = any(keyword in command_lower for keyword in test_run_keywords)
+            
+            directory_keywords = ['mkdir', 'create the actual directories', 'create directories']
+            is_architect = any(keyword in command_lower for keyword in directory_keywords)
+        
+        # Don't add exit flag for any multi-agent coordination tasks
+        # This allows Aider to complete file creation and modifications
+        # Only add exit flag for simple exploration tasks
+        if is_exploration and not any([is_finalizer, is_qa_runner, is_architect]):
+            cmd.extend(["--exit"])
         
         return cmd
     
@@ -456,8 +526,37 @@ class BaseAiderAgent(Agent, LoggerMixin):
         """Build specialized message based on agent type and expertise"""
         base_message = f"You are a {self.agent_type.value} agent specializing in: {', '.join(self.focus_areas)}.\n\n"
         
+        # Add language/framework context if available
+        if hasattr(task, 'target_language') and task.target_language:
+            base_message += f"Target Language: {task.target_language}\n"
+        if hasattr(task, 'target_framework') and task.target_framework:
+            base_message += f"Framework: {task.target_framework}\n"
+        if hasattr(task, 'project_context') and task.project_context:
+            if task.project_context.project_type:
+                base_message += f"Project Type: {task.project_context.project_type}\n"
+        if any([hasattr(task, 'target_language'), hasattr(task, 'target_framework')]):
+            base_message += "\n"
+        
+        # Check if this is an exploration task
+        exploration_keywords = ['examine', 'analyze', 'explore', 'review', 'understand', 
+                               'familiarize', 'inspect', 'current state', 'codebase',
+                               'architecture', 'list files', 'what files', 'show me']
+        is_exploration = any(keyword in task.command.lower() for keyword in exploration_keywords)
+        
+        if is_exploration:
+            base_message += """You have been given read-only access to key project files. 
+Please examine the codebase structure, understand the architecture, and provide a comprehensive analysis.
+Focus on identifying the project's current state, technologies used, and any remaining work needed.
+
+"""
+        
         # Trust Aider to understand the task naturally
         base_message += f"Task: {task.command}\n\n"
+        
+        # Add explicit file creation instruction if needed
+        command_lower = task.command.lower()
+        if any(keyword in command_lower for keyword in ['create', 'build', 'implement', 'add', 'write']):
+            base_message += "IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.\n\n"
         
         # Add specialized context based on agent type
         if self.agent_type.value == "aider_frontend":
@@ -509,10 +608,13 @@ Prioritize working with these file patterns:
     
     async def _execute_aider_with_session_management(self, cmd: List[str], env: dict, task: Task) -> TaskResult:
         """Execute Aider with better session management and output parsing"""
+        import time
+        start_time = time.time()
+        
         try:
             # Update monitor status if available
             if self._monitor and self._monitor_agent_id:
-                from agentic.core.swarm_monitor import AgentStatus
+                from agentic.core.swarm_monitor_unified import AgentStatus
                 self._monitor.update_agent_status(self._monitor_agent_id, AgentStatus.ANALYZING, "Starting Aider session...")
                 
                 # Add specific activity based on task type
@@ -527,6 +629,10 @@ Prioritize working with these file patterns:
                     else:
                         self._monitor.update_agent_activity(self._monitor_agent_id, "Processing task...")
             
+            # Log the actual command being executed
+            self.logger.info(f"[AIDER DEBUG] Executing command in {self.workspace_path}: {' '.join(cmd)}")
+            self.logger.info(f"[AIDER DEBUG] Command has {len(cmd)} arguments")
+            
             # Execute the command with proper stdin handling
             process = await asyncio.create_subprocess_exec(
                 *cmd,
@@ -536,6 +642,8 @@ Prioritize working with these file patterns:
                 env=env,
                 cwd=str(self.workspace_path)
             )
+            
+            self.logger.info(f"[AIDER DEBUG] Process started with PID: {process.pid}")
             
             # Update monitor to executing
             if self._monitor and self._monitor_agent_id:
@@ -590,15 +698,29 @@ Prioritize working with these file patterns:
                 output = stdout.decode('utf-8', errors='replace')
                 error_output = stderr.decode('utf-8', errors='replace')
             
+            # Log output for debugging
+            self.logger.info(f"[AIDER DEBUG] Process completed with return code: {process.returncode}")
+            self.logger.info(f"[AIDER DEBUG] Output length: {len(output)} chars")
+            self.logger.info(f"[AIDER DEBUG] Error output length: {len(error_output)} chars")
+            if len(output) < 1000:
+                self.logger.info(f"[AIDER DEBUG] Full output: {output}")
+            else:
+                self.logger.info(f"[AIDER DEBUG] Output preview: {output[:500]}...{output[-500:]}")
+            if error_output:
+                self.logger.info(f"[AIDER DEBUG] Error output: {error_output[:1000]}")
+            
             # Parse Aider output for better result reporting
             success, parsed_output = self._parse_aider_output(output, error_output, process.returncode)
             
+            # Calculate execution time
+            execution_time = time.time() - start_time
+            
             if success:
-                self.logger.info("Task completed successfully")
+                self.logger.info(f"Task completed successfully in {execution_time:.1f}s")
                 
                 # Update monitor status to completed if available
                 if self._monitor and self._monitor_agent_id:
-                    from agentic.core.swarm_monitor import AgentStatus
+                    from agentic.core.swarm_monitor_unified import AgentStatus
                     self._monitor.update_agent_status(self._monitor_agent_id, AgentStatus.FINALIZING)
                     if hasattr(self._monitor, 'update_agent_activity'):
                         self._monitor.update_agent_activity(self._monitor_agent_id, "Task completed successfully")
@@ -611,14 +733,15 @@ Prioritize working with these file patterns:
                     task_id=task.id,
                     status="completed",
                     output=parsed_output,
-                    agent_id=self.session.id if self.session else "unknown"
+                    agent_id=self.session.id if self.session else "unknown",
+                    execution_time=execution_time
                 )
             else:
-                self.logger.error(f"Task failed: {parsed_output}")
+                self.logger.error(f"Task failed after {execution_time:.1f}s: {parsed_output}")
                 
                 # Update monitor status to failed if available
                 if self._monitor and self._monitor_agent_id:
-                    from agentic.core.swarm_monitor import AgentStatus
+                    from agentic.core.swarm_monitor_unified import AgentStatus
                     self._monitor.update_agent_status(self._monitor_agent_id, AgentStatus.FAILED)
                     if hasattr(self._monitor, 'update_agent_activity'):
                         self._monitor.update_agent_activity(self._monitor_agent_id, f"Task failed: {parsed_output[:50]}...")
@@ -627,16 +750,19 @@ Prioritize working with these file patterns:
                     task_id=task.id,
                     status="failed",
                     error=parsed_output,
-                    agent_id=self.session.id if self.session else "unknown"
+                    agent_id=self.session.id if self.session else "unknown",
+                    execution_time=execution_time
                 )
                 
         except Exception as e:
-            self.logger.error(f"Execution error: {e}")
+            execution_time = time.time() - start_time
+            self.logger.error(f"Execution error after {execution_time:.1f}s: {e}")
             return TaskResult(
                 task_id=task.id,
                 status="failed", 
                 error=str(e),
-                agent_id=self.session.id if self.session else "unknown"
+                agent_id=self.session.id if self.session else "unknown",
+                execution_time=execution_time
             )
     
     def _parse_aider_output(self, stdout: str, stderr: str, return_code: int) -> tuple[bool, str]:
@@ -710,6 +836,85 @@ Prioritize working with these file patterns:
             return result.returncode == 0
         except Exception:
             return False
+    
+    def _detect_discoveries_in_output(self, stdout: str, stderr: str) -> None:
+        """Detect discoveries in Aider's output and report them"""
+        output = stdout + "\n" + stderr
+        
+        # Aider-specific patterns
+        
+        # Test needed patterns
+        test_patterns = [
+            r"Added.*test.*file",
+            r"Created.*test",
+            r"no tests? (?:found|exist)",
+            r"test coverage.*(?:low|missing)",
+            r"TODO.*test"
+        ]
+        
+        # Bug/issue patterns
+        bug_patterns = [
+            r"(?:bug|issue|error).*(?:found|detected)",
+            r"(?:fixing|fixed).*(?:bug|issue|error)",
+            r"potential.*(?:bug|issue)",
+            r"(?:warning|error):.*line \d+"
+        ]
+        
+        # Refactoring patterns
+        refactor_patterns = [
+            r"refactor(?:ed|ing)?",
+            r"code.*(?:smell|duplication)",
+            r"could be (?:simplified|improved)",
+            r"(?:extract|move).*(?:method|function|class)"
+        ]
+        
+        # API/endpoint patterns
+        api_patterns = [
+            r"(?:created|added).*endpoint",
+            r"API.*(?:route|endpoint).*(?:ready|created)",
+            r"REST.*endpoint.*at.*/"
+        ]
+        
+        # Check each pattern type
+        for pattern in test_patterns:
+            if re.search(pattern, output, re.IGNORECASE):
+                match = re.search(pattern, output, re.IGNORECASE)
+                self.report_discovery(
+                    DiscoveryType.TEST_NEEDED,
+                    f"Test-related activity: {match.group(0)}",
+                    context={"agent_type": self.config.agent_type.value},
+                    severity="warning"
+                )
+        
+        for pattern in bug_patterns:
+            if re.search(pattern, output, re.IGNORECASE):
+                match = re.search(pattern, output, re.IGNORECASE)
+                self.report_discovery(
+                    DiscoveryType.BUG_FOUND,
+                    f"Bug/issue detected: {match.group(0)}",
+                    context={"agent_type": self.config.agent_type.value},
+                    severity="error"
+                )
+        
+        for pattern in refactor_patterns:
+            if re.search(pattern, output, re.IGNORECASE):
+                match = re.search(pattern, output, re.IGNORECASE)
+                self.report_discovery(
+                    DiscoveryType.REFACTOR_OPPORTUNITY,
+                    f"Refactoring opportunity: {match.group(0)}",
+                    context={"agent_type": self.config.agent_type.value},
+                    severity="info"
+                )
+        
+        for pattern in api_patterns:
+            if re.search(pattern, output, re.IGNORECASE):
+                match = re.search(pattern, output, re.IGNORECASE)
+                self.report_discovery(
+                    DiscoveryType.API_READY,
+                    f"API endpoint activity: {match.group(0)}",
+                    context={"agent_type": self.config.agent_type.value},
+                    severity="info"
+                )
     
     def get_capabilities(self) -> AgentCapability:
         """Get capabilities of this Aider agent"""

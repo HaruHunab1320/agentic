@@ -4,13 +4,11 @@ from __future__ import annotations
 import asyncio
 import time
 import logging
-import statistics
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Dict, List, Optional, Any, Set, Type, Union
+from typing import Dict, List, Optional, Any, Set
 from dataclasses import dataclass
-import uuid
 
 from pydantic import BaseModel, Field
 
@@ -132,17 +130,14 @@ class BaseModelProvider(ABC):
     @abstractmethod
     async def generate(self, request: ModelRequest) -> ModelResponse:
         """Generate response from model"""
-        pass
     
     @abstractmethod
     async def health_check(self) -> bool:
         """Check provider health"""
-        pass
     
     @abstractmethod
     async def estimate_cost(self, prompt: str, max_tokens: int) -> float:
         """Estimate cost for request"""
-        pass
     
     def can_handle_request(self, request: ModelRequest) -> bool:
         """Check if provider can handle the request"""

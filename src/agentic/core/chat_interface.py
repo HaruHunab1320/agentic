@@ -3,9 +3,7 @@ Interactive Chat Interface for Agentic
 """
 
 import asyncio
-import sys
 from pathlib import Path
-from typing import Optional, Dict, Any
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
@@ -15,13 +13,13 @@ from prompt_toolkit.styles import Style
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
-from rich.live import Live
-from rich.spinner import Spinner
-from rich.text import Text
 
 from agentic.core.orchestrator import Orchestrator
 from agentic.models.config import AgenticConfig
 from agentic.utils.logging import LoggerMixin
+from agentic.core.session_manager import SessionManager
+from agentic.core.language_selector import LanguageSelector
+from agentic.core.project_indexer import ProjectIndexer
 
 
 class ChatInterface(LoggerMixin):
@@ -37,9 +35,19 @@ class ChatInterface(LoggerMixin):
         self.history_file = Path.home() / ".agentic" / "chat_history"
         self.history_file.parent.mkdir(exist_ok=True)
         
+        # Session manager for persistence
+        self.session_manager = SessionManager(workspace_path)
+        
+        # Language selector and project indexer
+        self.language_selector = LanguageSelector()
+        self.project_indexer = ProjectIndexer(workspace_path)
+        self.project_context = None
+        
         # Default preferences
         self.default_model = None
         self.default_agent_type = 'dynamic'
+        self.default_language = None
+        self.default_framework = None
         
         # Define style for the prompt
         self.style = Style.from_dict({
@@ -50,7 +58,8 @@ class ChatInterface(LoggerMixin):
         # Command completions
         self.commands = [
             '/help', '/exit', '/quit', '/clear', '/status', '/agents',
-            '/spawn', '/exec', '/analyze', '/model', '/debug', '/history'
+            '/spawn', '/exec', '/analyze', '/model', '/debug', '/history',
+            '/sessions', '/context', '/mode'
         ]
     
     async def initialize(self) -> bool:
@@ -75,6 +84,14 @@ class ChatInterface(LoggerMixin):
             
             # Show current status
             await self._show_status()
+            
+            # Start session
+            self.session_manager.start_session()
+            
+            # Show previous context if available
+            context_summary = self.session_manager.get_context_summary()
+            if context_summary:
+                self.console.print("\n[dim]📝 Previous session context loaded[/dim]")
             
             return True
             
@@ -129,8 +146,10 @@ Type your commands naturally or use slash commands:
                 await self.process_input(user_input.strip())
                 
             except KeyboardInterrupt:
+                self.session_manager.end_session()
                 break
             except EOFError:
+                self.session_manager.end_session()
                 break
             except Exception as e:
                 self.console.print(f"[red]❌ Error: {e}[/red]")
@@ -193,6 +212,15 @@ Type your commands naturally or use slash commands:
         elif cmd == '/history':
             self._show_history()
         
+        elif cmd == '/sessions':
+            self._show_sessions()
+        
+        elif cmd == '/context':
+            self._show_context()
+        
+        elif cmd == '/mode':
+            await self._handle_mode_command(args)
+        
         else:
             self.console.print(f"[red]Unknown command: {cmd}[/red]")
             self.console.print("[dim]Type /help for available commands[/dim]")
@@ -218,8 +246,11 @@ Type your commands naturally or use slash commands:
   [cyan]/exec[/cyan]      - Execute a command explicitly
   [cyan]/analyze[/cyan]   - Analyze a command without executing
   [cyan]/model[/cyan]     - Show or set the AI model
+  [cyan]/mode[/cyan]      - View or set execution mode (autonomous/hierarchical)
   [cyan]/debug[/cyan]     - Toggle debug mode
   [cyan]/history[/cyan]   - Show command history
+  [cyan]/sessions[/cyan]  - Show session history
+  [cyan]/context[/cyan]   - Show previous session context
 
 [bold cyan]Agent Selection:[/bold cyan]
   Prefix commands to force specific agents:
@@ -279,6 +310,10 @@ Type your commands naturally or use slash commands:
     
     async def _execute_natural_command(self, command: str):
         """Execute a natural language command"""
+        # Import Panel and Text at the top for use throughout the method
+        from rich.panel import Panel
+        from rich.text import Text
+        
         # Check for agent prefix
         agent_type = None
         if command.startswith('@'):
@@ -307,6 +342,43 @@ Type your commands naturally or use slash commands:
         task_analyzer = TaskAnalyzer()
         task_analysis = await task_analyzer.analyze_task(command)
         
+        # Index project if not done already
+        if not self.project_context:
+            self.console.print("[dim]Indexing project for context awareness...[/dim]")
+            await self.project_indexer.index_project()
+            self.project_context = self.project_indexer.get_project_context()
+        
+        # Detect language preference
+        detected_language, detected_framework = self.language_selector.infer_language_from_context(
+            command, self.project_context
+        )
+        
+        # Check if we need clarification
+        if not detected_language and task_analysis.file_count_estimate > 0:
+            clarification_prompt = self.language_selector.get_clarification_prompt(
+                command, self.project_context
+            )
+            if clarification_prompt:
+                # Ask for language preference
+                self.console.print(Panel(
+                    clarification_prompt,
+                    title="Language Selection",
+                    border_style="yellow"
+                ))
+                
+                # Get user response
+                prompt_session = PromptSession()
+                response = await prompt_session.prompt_async("Your choice: ")
+                
+                # Parse response
+                detected_language, detected_framework = self.language_selector.parse_language_response(response)
+                
+                # Save as defaults
+                if detected_language:
+                    self.default_language = detected_language
+                if detected_framework:
+                    self.default_framework = detected_framework
+        
         # Show brief processing message - but not with Live for multi-agent to avoid display conflicts
         is_multi_agent = (query_analysis.suggested_approach in ["coordinated_analysis", "multi_agent_implementation"] or 
                          task_analysis.file_count_estimate > 3 or "all" in command.lower())
@@ -322,9 +394,7 @@ Type your commands naturally or use slash commands:
         if is_question_task:
             from rich.live import Live
             from rich.spinner import Spinner
-            from rich.text import Text
             from rich.table import Table
-            from rich.panel import Panel
             import time
             import logging
             
@@ -374,14 +444,24 @@ Type your commands naturally or use slash commands:
                 # Coordinated analysis for complex queries
                 context = {
                     'agent_type_strategy': agent_type or 'dynamic',
-                    'coordination_type': 'analysis'
+                    'coordination_type': 'analysis',
+                    'session_manager': self.session_manager,
+                    'target_language': detected_language or self.default_language,
+                    'target_framework': detected_framework or self.default_framework,
+                    'project_context': self.project_context
                 }
                 result = await self.orchestrator.execute_multi_agent_command(command, context)
                 
             elif query_analysis.suggested_approach == "multi_agent_implementation" or \
                  task_analysis.file_count_estimate > 3 or "all" in command.lower():
                 # Multi-agent execution for implementation
-                context = {'agent_type_strategy': agent_type or 'dynamic'}
+                context = {
+                    'agent_type_strategy': agent_type or 'dynamic',
+                    'session_manager': self.session_manager,
+                    'target_language': detected_language or self.default_language,
+                    'target_framework': detected_framework or self.default_framework,
+                    'project_context': self.project_context
+                }
                 result = await self.orchestrator.execute_multi_agent_command(command, context)
                 
             else:
@@ -392,14 +472,22 @@ Type your commands naturally or use slash commands:
                     context = {
                         'preferred_agent': query_analysis.suggested_agent,
                         'enable_monitoring': False,  # Disable for simple questions
-                        'status_updater': self._update_query_status if hasattr(self, '_update_query_status') else None
+                        'status_updater': self._update_query_status if hasattr(self, '_update_query_status') else None,
+                        'session_manager': self.session_manager,
+                        'target_language': detected_language or self.default_language,
+                        'target_framework': detected_framework or self.default_framework,
+                        'project_context': self.project_context
                     }
                     result = await self.orchestrator.execute_command(command, context)
                 else:
                     # Disable full swarm monitoring for simple questions to avoid screen clearing
                     context = {
                         'enable_monitoring': False,
-                        'status_updater': self._update_query_status if hasattr(self, '_update_query_status') else None
+                        'status_updater': self._update_query_status if hasattr(self, '_update_query_status') else None,
+                        'session_manager': self.session_manager,
+                        'target_language': detected_language or self.default_language,
+                        'target_framework': detected_framework or self.default_framework,
+                        'project_context': self.project_context
                     }
                     result = await self.orchestrator.execute_command(command, context)
             
@@ -407,6 +495,26 @@ Type your commands naturally or use slash commands:
             if hasattr(self, '_query_live') and self._query_live:
                 self._query_live.stop()
                 self._query_live = None
+            
+            # Store command and result in session for context retrieval
+            if hasattr(self, 'session_manager') and result:
+                agent_used = None
+                files_modified = []
+                
+                # Extract agent and files info
+                if hasattr(result, 'agent_id'):
+                    agent_used = result.agent_id
+                if hasattr(result, 'files_modified'):
+                    files_modified = result.files_modified
+                
+                # Store the full output for better context retrieval
+                full_response = result.output if hasattr(result, 'output') else str(result)
+                self.session_manager.add_entry(
+                    command=command,
+                    response=full_response,
+                    agent_used=agent_used,
+                    files_modified=files_modified
+                )
             
             # Display results
             if result:
@@ -588,6 +696,54 @@ Type your commands naturally or use slash commands:
             if hasattr(self, '_is_question_task') and self._is_question_task:
                 import logging
                 logging.getLogger('agentic').setLevel(logging.INFO)
+            
+            # Track command in session
+            if 'result' in locals() and result:
+                response_summary = ""
+                files_modified = []
+                
+                if hasattr(result, 'output'):
+                    # Extract meaningful content from the output
+                    output_text = str(result.output)
+                    
+                    # For Claude's JSON output, parse and extract the actual response
+                    if output_text.strip().startswith('{') and hasattr(result, 'agent_id') and 'claude' in str(result.agent_id).lower():
+                        try:
+                            from agentic.agents.output_parser import AgentOutputParser
+                            parser = AgentOutputParser()
+                            parsed = parser.parse_output(output_text, 'claude_code')
+                            
+                            # Use the summary or response field for session storage
+                            if parsed['summary']:
+                                response_summary = parsed['summary']
+                            elif parsed['response']:
+                                response_summary = parsed['response']
+                            else:
+                                # Fallback to raw output
+                                response_summary = output_text[:2000]
+                        except:
+                            # If parsing fails, use raw output
+                            response_summary = output_text[:2000]
+                    else:
+                        # For non-JSON output, store more content for analysis tasks
+                        max_length = 2000 if 'analysis' in command.lower() else 500
+                        response_summary = output_text[:max_length]
+                        
+                elif hasattr(result, 'task_results'):
+                    # Multi-agent result
+                    completed = sum(1 for tr in result.task_results.values() if tr.status == "completed")
+                    response_summary = f"Multi-agent execution: {completed}/{len(result.task_results)} tasks completed"
+                    
+                    # Collect files modified
+                    for tr in result.task_results.values():
+                        if hasattr(tr, 'files_modified') and tr.files_modified:
+                            files_modified.extend(tr.files_modified)
+                
+                self.session_manager.add_entry(
+                    command=command,
+                    response=response_summary,
+                    files_modified=files_modified
+                )
     
     async def _spawn_agent(self, args: list):
         """Spawn a specific agent"""
@@ -653,3 +809,81 @@ Type your commands naturally or use slash commands:
                 self.console.print(f"  {i}. {cmd.strip()}")
         else:
             self.console.print("[yellow]No command history found[/yellow]")
+    
+    def _show_sessions(self):
+        """Show session history"""
+        sessions = self.session_manager.list_sessions()
+        
+        if not sessions:
+            self.console.print("[yellow]No sessions found for this workspace[/yellow]")
+            return
+        
+        from rich.table import Table
+        
+        table = Table(title="Session History")
+        table.add_column("Session ID", style="cyan")
+        table.add_column("Start Time", style="green")
+        table.add_column("Duration", style="yellow")
+        table.add_column("Commands", style="magenta")
+        
+        for session_info in sessions[:10]:  # Show last 10 sessions
+            start_date = session_info.get('start_date', 'Unknown')
+            duration = "Active"
+            if session_info.get('end_time'):
+                duration_secs = session_info['end_time'] - session_info['start_time']
+                duration = f"{int(duration_secs / 60)}m {int(duration_secs % 60)}s"
+            
+            num_entries = session_info.get('num_entries', 0)
+            table.add_row(
+                session_info['session_id'][-20:],  # Show last 20 chars
+                start_date,
+                duration,
+                str(num_entries)
+            )
+        
+        self.console.print(table)
+    
+    def _show_context(self):
+        """Show previous session context"""
+        context = self.session_manager.get_context_summary()
+        
+        if not context:
+            self.console.print("[yellow]No previous context available[/yellow]")
+            return
+        
+        self.console.print("\n[bold]Previous Session Context:[/bold]")
+        self.console.print(context)
+    
+    async def _handle_mode_command(self, args: list):
+        """Handle /mode command to switch execution modes"""
+        if not args:
+            # Show current mode
+            current_mode = self.orchestrator.current_mode
+            self.console.print(f"\n[bold]Current Mode:[/bold] [cyan]{current_mode.value}[/cyan]")
+            self.console.print("\n[bold]Available Modes:[/bold]")
+            self.console.print("  • [cyan]autonomous[/cyan] - Agents work independently")
+            self.console.print("  • [cyan]interactive[/cyan] - Agents can ask questions")
+            self.console.print("  • [cyan]supervised[/cyan] - Monitor agent execution")
+            self.console.print("  • [cyan]hierarchical[/cyan] - Use supervisor→specialist→worker hierarchy")
+            self.console.print("\n[dim]Usage: /mode <mode_name>[/dim]")
+            return
+        
+        mode_name = args[0].lower()
+        try:
+            # Use orchestrator's mode command handling
+            result = await self.orchestrator.execute_command(f"/mode {mode_name}")
+            
+            if result.status == "completed":
+                self.console.print(result.output)
+                
+                # Show hierarchical mode tips
+                if mode_name == "hierarchical":
+                    self.console.print("\n[bold cyan]Hierarchical Mode Tips:[/bold cyan]")
+                    self.console.print("  • Best for complex, multi-phase projects")
+                    self.console.print("  • Automatically scales agent workforce based on task complexity")
+                    self.console.print("  • Simple queries still use single agents for efficiency")
+                    self.console.print("  • Example: 'build a complete microservices platform'")
+            else:
+                self.console.print(f"[red]❌ {result.error}[/red]")
+        except Exception as e:
+            self.console.print(f"[red]❌ Failed to change mode: {e}[/red]")

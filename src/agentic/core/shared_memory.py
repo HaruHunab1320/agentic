@@ -5,7 +5,6 @@ Shared Memory system for inter-agent communication and coordination
 from __future__ import annotations
 
 import asyncio
-import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -132,6 +131,8 @@ class SharedMemory(LoggerMixin):
         """Mark task as completed"""
         async with self._task_lock:
             if task_id in self._active_tasks:
+                # Store task info before deleting
+                task = self._active_tasks[task_id]
                 del self._active_tasks[task_id]
             
             if task_id in self._task_progress:
@@ -140,7 +141,8 @@ class SharedMemory(LoggerMixin):
                     "progress": 1.0,
                     "message": "Task completed",
                     "result": result,
-                    "completed_at": datetime.utcnow()
+                    "completed_at": datetime.utcnow(),
+                    "command": task.command if 'task' in locals() else None
                 })
     
     def get_task_progress(self, task_id: str) -> Optional[Dict[str, Any]]:
@@ -299,4 +301,27 @@ class SharedMemory(LoggerMixin):
                 cleaned_count += 1
                 self.logger.warning(f"Released stale file lock: {file_path}")
             
-            return cleaned_count 
+            return cleaned_count
+    
+    async def store_delegation_metrics(self, metrics: Dict[str, Any]) -> None:
+        """Store delegation metrics from hierarchical agent execution"""
+        # Store metrics in task progress for the given task
+        task_id = metrics.get("task_id")
+        if task_id and task_id in self._task_progress:
+            self._task_progress[task_id]["delegation_metrics"] = metrics
+            self.logger.info(f"Stored delegation metrics for task {task_id}")
+        else:
+            # Store in a general metrics location
+            if not hasattr(self, '_delegation_metrics'):
+                self._delegation_metrics = []
+            self._delegation_metrics.append(metrics)
+            # Keep only recent metrics (last 100)
+            if len(self._delegation_metrics) > 100:
+                self._delegation_metrics = self._delegation_metrics[-100:]
+            self.logger.info(f"Stored general delegation metrics for supervisor {metrics.get('supervisor_id')}")
+    
+    def get_delegation_history(self) -> List[Dict[str, Any]]:
+        """Get history of delegation metrics"""
+        if hasattr(self, '_delegation_metrics'):
+            return self._delegation_metrics.copy()
+        return [] 

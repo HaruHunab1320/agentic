@@ -5,7 +5,6 @@ Utilities for clean swarm monitor display
 import sys
 import io
 import contextlib
-from typing import Optional
 
 
 class MonitorOutputRedirect:

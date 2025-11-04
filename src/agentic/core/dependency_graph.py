@@ -7,7 +7,7 @@ from __future__ import annotations
 import ast
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Set
 
 from agentic.models.project import DependencyGraph, ProjectStructure, TechStack
 from agentic.utils.logging import LoggerMixin

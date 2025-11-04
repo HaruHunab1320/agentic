@@ -22,7 +22,6 @@ from agentic.models.config import AgenticConfig
 from agentic.utils.logging import setup_logging
 from agentic.core.interactive_cli import InteractiveCLI
 from agentic.core.ide_integration import (
-    IDEIntegrationManager,
     initialize_ide_integration,
     get_ide_integration_manager,
     create_ide_command_from_selection,
@@ -134,7 +133,7 @@ def analyze(ctx: click.Context, output: str) -> None:
 
 
 @cli.command()
-@click.argument("agent_type", type=click.Choice(["backend", "frontend", "testing", "reasoning"]))
+@click.argument("agent_type", type=click.Choice(["backend", "frontend", "testing", "reasoning", "research"]))
 @click.option("--model", "-m", default="claude-3-5-sonnet", help="AI model to use")
 @click.pass_context
 def spawn(ctx: click.Context, agent_type: str, model: str) -> None:
@@ -512,7 +511,6 @@ def interactive(ctx: click.Context, workspace: Path, model: str, max_cost: float
 @click.pass_context  
 def config(ctx: click.Context):
     """Configuration management commands"""
-    pass
 
 
 @config.command("show")
@@ -755,7 +753,6 @@ def debug(ctx: click.Context, agent_name: Optional[str]):
 @cli.group()
 def ide():
     """IDE integration commands"""
-    pass
 
 
 @ide.command('init')
@@ -1488,13 +1485,11 @@ def exec_multi(ctx: click.Context, command: tuple, context: str, agent_type: str
 @cli.group()
 def model():
     """Configure AI models for agents"""
-    pass
 
 
 @cli.group()
 def api():
     """Manage API keys for AI providers"""
-    pass
 
 
 @api.command('set')
@@ -1581,7 +1576,6 @@ def api_list(ctx: click.Context):
 @cli.group()
 def model():
     """Configure AI models for agents"""
-    pass
 
 
 @model.command('list')
@@ -1791,7 +1785,6 @@ def model_test(model_name: str, workspace: Path):
 @cli.group()
 def keys():
     """Manage API keys securely"""
-    pass
 
 
 @keys.command('set')

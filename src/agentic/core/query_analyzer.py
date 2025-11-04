@@ -6,7 +6,7 @@ or requires coordinated multi-agent analysis.
 """
 
 from dataclasses import dataclass
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 import re
 
 from agentic.utils.logging import LoggerMixin
@@ -116,6 +116,21 @@ class QueryAnalyzer(LoggerMixin):
     
     def _determine_query_type(self, query: str) -> str:
         """Determine the type of query"""
+        # Check if this is a follow-up implementation request
+        implementation_followup_phrases = [
+            "now implement", "can you now implement", "please implement",
+            "go ahead", "proceed with", "let's implement",
+            "the missing logic", "complete the", "build that",
+            "implement it", "create it", "build it"
+        ]
+        
+        if any(phrase in query for phrase in implementation_followup_phrases):
+            return "implementation"
+        
+        # Check if query contains analysis context (enriched command)
+        if "Based on the following analysis:" in query and any(word in query for word in ['implement', 'build', 'create', 'complete']):
+            return "implementation"
+        
         # Check for questions first if they contain question indicators
         if any(re.search(pattern, query) for pattern in self.question_patterns):
             # Common question patterns that should remain questions
@@ -230,6 +245,19 @@ class QueryAnalyzer(LoggerMixin):
         
         # Implementation tasks
         if query_type == "implementation":
+            # Check if this is a follow-up implementation with context
+            if "Based on the following analysis:" in query:
+                reasoning.append("Implementation request includes analysis context")
+                reasoning.append("Multiple specialized agents needed based on analysis")
+                return "multi_agent_implementation", None, reasoning
+            
+            # Check for follow-up phrases that suggest multi-agent work
+            follow_up_indicators = ["now implement", "complete the", "missing logic", "implement it"]
+            if any(indicator in query.lower() for indicator in follow_up_indicators):
+                reasoning.append("Follow-up implementation likely requires multiple components")
+                reasoning.append("Multi-agent approach ensures comprehensive implementation")
+                return "multi_agent_implementation", None, reasoning
+            
             if complexity == "simple" or scope == "single_file":
                 reasoning.append("Simple implementation can be handled by one agent")
                 reasoning.append("Aider is efficient for focused code generation")

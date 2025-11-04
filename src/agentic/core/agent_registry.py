@@ -4,13 +4,10 @@ Agent Registry for managing multiple agent instances
 
 from __future__ import annotations
 
-import asyncio
-import uuid
-from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Type
 
-from agentic.models.agent import Agent, AgentConfig, AgentSession, AgentType, AgentCapability
+from agentic.models.agent import Agent, AgentConfig, AgentSession, AgentType
 from agentic.models.project import ProjectStructure
 from agentic.utils.logging import LoggerMixin
 
@@ -36,11 +33,15 @@ class AgentRegistry(LoggerMixin):
             AiderTestingAgent
         )
         from agentic.agents.claude_code_agent import ClaudeCodeAgent
+        from agentic.agents.gemini_agent import GeminiAgent
+        from agentic.agents.codex_research_agent import CodexResearchAgent
         
         self.agent_types[AgentType.AIDER_FRONTEND] = AiderFrontendAgent
         self.agent_types[AgentType.AIDER_BACKEND] = AiderBackendAgent
         self.agent_types[AgentType.AIDER_TESTING] = AiderTestingAgent
         self.agent_types[AgentType.CLAUDE_CODE] = ClaudeCodeAgent
+        self.agent_types[AgentType.GEMINI] = GeminiAgent
+        self.agent_types[AgentType.CODEX_RESEARCH] = CodexResearchAgent
     
     def register_agent_type(self, agent_type: AgentType, agent_class: Type[Agent]) -> None:
         """Register a new agent type"""
@@ -68,6 +69,10 @@ class AgentRegistry(LoggerMixin):
         
         if config.agent_type not in self.agent_types:
             raise ValueError(f"Unknown agent type: {config.agent_type}")
+        
+        # Set automated mode for multi-agent execution
+        import os
+        os.environ['AGENTIC_AUTOMATED_MODE'] = 'true'
         
         agent_class = self.agent_types[config.agent_type]
         agent = agent_class(config)
@@ -249,18 +254,56 @@ class AgentRegistry(LoggerMixin):
         self.logger.info("Auto-spawning agents based on project structure")
         spawned_sessions = []
         
-        # Always spawn a reasoning agent (Claude Code)
-        reasoning_config = AgentConfig(
-            agent_type=AgentType.CLAUDE_CODE,
-            name="reasoning",
+        # Always spawn Gemini as Chief Architect
+        chief_architect_config = AgentConfig(
+            agent_type=AgentType.GEMINI,
+            name="chief-architect",
             workspace_path=self.workspace_path,
-            focus_areas=["debugging", "analysis", "explanation", "reasoning"],
-            ai_model_config={"model": "claude-3-5-sonnet"}
+            focus_areas=["system-architecture", "research", "knowledge-hub", "multimodal", "cross-domain"],
+            ai_model_config={"model": "gemini-2.5-pro"}
         )
         
-        reasoning_session = await self.spawn_agent(reasoning_config)
-        if reasoning_session.status == "active":
-            spawned_sessions.append(reasoning_session)
+        chief_architect_session = await self.spawn_agent(chief_architect_config)
+        if chief_architect_session.status == "active":
+            spawned_sessions.append(chief_architect_session)
+        
+        # Spawn Claude Code as domain architects based on project structure
+        # Frontend domain architect for web projects
+        if any(fw.lower() in {"react", "vue", "angular", "svelte", "nextjs", "nuxt"} 
+               for fw in project_structure.tech_stack.frameworks):
+            frontend_architect_config = AgentConfig(
+                agent_type=AgentType.CLAUDE_CODE,
+                name="frontend-architect",
+                workspace_path=self.workspace_path,
+                focus_areas=["frontend-architecture", "component-design", "state-management", "ui-patterns"],
+                ai_model_config={"model": "claude-3-5-sonnet"}
+            )
+            
+            frontend_architect_session = await self.spawn_agent(frontend_architect_config)
+            if frontend_architect_session.status == "active":
+                spawned_sessions.append(frontend_architect_session)
+        
+        # Backend domain architect
+        backend_languages = {"python", "javascript", "typescript", "go", "rust", "java"}
+        backend_frameworks = {"fastapi", "django", "flask", "express", "nestjs", "gin", "actix", "spring"}
+        
+        has_backend = (
+            any(lang.lower() in backend_languages for lang in project_structure.tech_stack.languages) or
+            any(fw.lower() in backend_frameworks for fw in project_structure.tech_stack.frameworks)
+        )
+        
+        if has_backend:
+            backend_architect_config = AgentConfig(
+                agent_type=AgentType.CLAUDE_CODE,
+                name="backend-architect",
+                workspace_path=self.workspace_path,
+                focus_areas=["backend-architecture", "api-design", "data-modeling", "service-patterns"],
+                ai_model_config={"model": "claude-3-5-sonnet"}
+            )
+            
+            backend_architect_session = await self.spawn_agent(backend_architect_config)
+            if backend_architect_session.status == "active":
+                spawned_sessions.append(backend_architect_session)
         
         # Spawn frontend agent for web projects
         web_frameworks = {"react", "vue", "angular", "svelte", "nextjs", "nuxt"}

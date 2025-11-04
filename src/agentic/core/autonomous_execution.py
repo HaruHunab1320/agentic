@@ -5,7 +5,6 @@ This module enables agents to work naturally without over-processing or constrai
 The focus is on orchestration, not reimplementation.
 """
 
-import asyncio
 from typing import Optional, Dict, Any, Callable
 from dataclasses import dataclass
 from enum import Enum
@@ -20,6 +19,7 @@ class ExecutionMode(Enum):
     AUTONOMOUS = "autonomous"      # Agent handles everything independently
     INTERACTIVE = "interactive"    # Agent can ask questions, we pass through
     SUPERVISED = "supervised"      # We monitor but don't interfere
+    HIERARCHICAL = "hierarchical"  # Use hierarchical agent structure (supervisor->specialist->worker)
 
 
 @dataclass

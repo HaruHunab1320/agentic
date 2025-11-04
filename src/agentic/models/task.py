@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 from pydantic import BaseModel, Field
 
@@ -35,6 +35,18 @@ class TaskIntent(BaseModel):
     file_patterns: List[str] = Field(default_factory=list, description="File patterns likely to be involved")
 
 
+class ProjectContext(BaseModel):
+    """Project context information for language/framework awareness"""
+    primary_language: Optional[str] = Field(default=None, description="Primary programming language")
+    languages: Set[str] = Field(default_factory=set, description="All detected languages")
+    framework: Optional[str] = Field(default=None, description="Primary framework (React, Django, etc.)")
+    frameworks: Set[str] = Field(default_factory=set, description="All detected frameworks")
+    package_manager: Optional[str] = Field(default=None, description="Package manager (npm, pip, etc.)")
+    project_type: Optional[str] = Field(default=None, description="Project type (web, cli, library, etc.)")
+    style_guides: Dict[str, str] = Field(default_factory=dict, description="Detected style preferences")
+    existing_patterns: Dict[str, List[str]] = Field(default_factory=dict, description="Existing code patterns")
+
+
 class Task(BaseModel):
     """A task to be executed by agents"""
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Unique task identifier")
@@ -48,6 +60,15 @@ class Task(BaseModel):
     completed_at: Optional[datetime] = Field(default=None, description="Task completion timestamp")
     result: Optional[Dict] = Field(default=None, description="Task execution result")
     error: Optional[str] = Field(default=None, description="Error message if task failed")
+    
+    # Language and project context
+    target_language: Optional[str] = Field(default=None, description="Target programming language")
+    target_framework: Optional[str] = Field(default=None, description="Target framework")
+    project_context: Optional[ProjectContext] = Field(default=None, description="Project context information")
+    
+    # File context for better awareness
+    relevant_files: List[str] = Field(default_factory=list, description="Files relevant to this task")
+    modified_files: List[str] = Field(default_factory=list, description="Files modified by this task")
     
     # Additional fields for multi-agent coordination
     agent_type_hint: Optional[str] = Field(default=None, description="Hint for which agent type should handle this task")

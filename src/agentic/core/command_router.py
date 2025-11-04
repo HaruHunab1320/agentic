@@ -4,7 +4,6 @@ Command Router for routing commands to appropriate agents
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import List, Optional
 
 from agentic.core.agent_registry import AgentRegistry

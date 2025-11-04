@@ -10,8 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 import tempfile
 
 from agentic.core.orchestrator import Orchestrator
-from agentic.models.project import Project
-from agentic.utils.performance_metrics import PerformanceCollector
+from agentic.models.project import ProjectStructure
 from agentic.models.config import AgenticConfig
 from agentic.models.task import TaskResult
 

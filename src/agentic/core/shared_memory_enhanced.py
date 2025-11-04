@@ -4,16 +4,13 @@ Enhanced Shared Memory System for Phase 3 with embeddings and learning capabilit
 
 from __future__ import annotations
 
-import asyncio
 import json
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
-import numpy as np
 from agentic.core.shared_memory import SharedMemory
-from agentic.utils.logging import LoggerMixin
 import aiosqlite
 
 

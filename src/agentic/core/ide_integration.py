@@ -3,21 +3,16 @@ Phase 4: IDE Integration
 Seamless integration with popular development environments including VS Code, JetBrains, and GitHub
 """
 
-import asyncio
 import json
 import os
-import subprocess
-import tempfile
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from enum import Enum
 
-from pydantic import BaseModel, Field
 from rich.console import Console
-from rich.panel import Panel
 
 
 class IDEType(str, Enum):

@@ -8,7 +8,6 @@ decisions, and context with each other.
 
 import asyncio
 import json
-import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
@@ -244,7 +243,7 @@ It leverages Claude Code's memory system for persistent agent coordination.
         for agent_session in target_agents:
             try:
                 # Get the agent instance
-                from agentic.agents.claude_code_agent import ClaudeCodeAgent
+                pass
                 
                 # Check if it's a Claude Code agent
                 if hasattr(agent_session, 'agent_config') and agent_session.agent_config.agent_type.value == "claude_code":

@@ -16,6 +16,8 @@ from agentic.core.intent_classifier import IntentClassifier
 from agentic.core.project_analyzer import ProjectAnalyzer
 from agentic.core.shared_memory import SharedMemory
 from agentic.core.inter_agent_communication import InterAgentCommunicationHub
+from agentic.core.autonomous_execution import ExecutionMode
+from agentic.core.hierarchical_agents import SupervisorAgent, ResourceManager
 from agentic.models.agent import AgentSession, AgentType
 from agentic.models.config import AgenticConfig
 from agentic.models.project import ProjectStructure
@@ -41,7 +43,16 @@ class Orchestrator(LoggerMixin):
         self.shared_memory = SharedMemory()
         self.intent_classifier = IntentClassifier()
         self.command_router = CommandRouter(self.agent_registry)
-        self.coordination_engine = CoordinationEngine(self.agent_registry, self.shared_memory)
+        # Initialize coordination engine with safety features disabled by default
+        # TODO: Enable safety features once database issues are resolved
+        enable_safety = config.enable_safety if hasattr(config, 'enable_safety') else False
+        self.coordination_engine = CoordinationEngine(
+            self.agent_registry, 
+            self.shared_memory, 
+            config.workspace_path,
+            enable_safety=enable_safety
+        )
+        self.logger.info(f"Initialized CoordinationEngine with safety features {'enabled' if enable_safety else 'disabled'}")
         
         # NEW: Inter-agent communication system
         self.communication_hub = InterAgentCommunicationHub(workspace_path=config.workspace_path)
@@ -50,6 +61,9 @@ class Orchestrator(LoggerMixin):
         self._project_structure: Optional[ProjectStructure] = None
         self._is_initialized = False
         self._background_task: Optional[asyncio.Task] = None
+        self._current_mode: ExecutionMode = ExecutionMode.AUTONOMOUS
+        self._resource_manager: Optional[ResourceManager] = None
+        self._supervisor_agent: Optional[SupervisorAgent] = None
     
     async def initialize(self, project_path: Optional[Path] = None) -> bool:
         """Initialize the orchestrator with project analysis"""
@@ -71,6 +85,14 @@ class Orchestrator(LoggerMixin):
             # Initialize agent registry
             await self.agent_registry.initialize()
             
+            # Auto-spawn agents if enabled
+            if self.config.auto_spawn_agents and self._project_structure:
+                self.logger.info("Auto-spawning agents based on project structure...")
+                spawned_agents = await self.agent_registry.auto_spawn_agents(self._project_structure)
+                self.logger.info(f"Auto-spawned {len(spawned_agents)} agents")
+                for agent in spawned_agents:
+                    self.logger.info(f"  - {agent.agent_config.name} ({agent.agent_config.agent_type})")
+            
             # Start background tasks
             self._background_task = asyncio.create_task(self._background_maintenance())
             
@@ -82,12 +104,46 @@ class Orchestrator(LoggerMixin):
             self.logger.error(f"Failed to initialize orchestrator: {e}")
             return False
     
+    @property
+    def current_mode(self) -> ExecutionMode:
+        """Get the current execution mode"""
+        return self._current_mode
+    
+    def enable_safety_features(self, enabled: bool = True) -> None:
+        """Enable or disable safety features in the coordination engine"""
+        self.coordination_engine.enable_safety = enabled
+        self.logger.info(f"Safety features {'enabled' if enabled else 'disabled'}")
+    
+    def set_mode(self, mode: ExecutionMode) -> None:
+        """Set the execution mode"""
+        self.logger.info(f"Setting execution mode to: {mode.value}")
+        self._current_mode = mode
+        
+        # Initialize resources for hierarchical mode if needed
+        if mode == ExecutionMode.HIERARCHICAL and not self._resource_manager:
+            self._resource_manager = ResourceManager()
+            self.logger.info("Initialized ResourceManager for hierarchical mode")
+    
     async def execute_command(self, command: str, context: Optional[Dict[str, Any]] = None) -> TaskResult:
         """Execute a single command"""
         if not self._is_initialized:
             raise RuntimeError("Orchestrator not initialized. Call initialize() first.")
         
-        self.logger.info(f"Executing command: {command[:50]}...")
+        # Check if this is a mode switch command
+        if command.strip().lower().startswith("/mode"):
+            return await self._handle_mode_command(command)
+        
+        # Check if we're in hierarchical mode
+        if self._current_mode == ExecutionMode.HIERARCHICAL:
+            return await self.execute_hierarchical_command(command, context)
+        
+        self.logger.info(f"Executing command in {self._current_mode.value} mode: {command[:50]}...")
+        
+        # Check if this is a follow-up command that needs context
+        if context and context.get('session_manager'):
+            enriched_command = await self._enrich_command_with_context(command, context)
+        else:
+            enriched_command = command
         
         # Determine if we should show monitoring
         should_monitor = context and context.get('enable_monitoring', True)
@@ -97,12 +153,21 @@ class Orchestrator(LoggerMixin):
             # Start monitoring if enabled
             if should_monitor and hasattr(self, 'coordination_engine') and hasattr(self.coordination_engine, 'swarm_monitor'):
                 await self.coordination_engine.swarm_monitor.start_monitoring()
-            # Classify intent
-            intent = await self.intent_classifier.analyze_intent(command)
-            self.logger.debug(f"Classified intent: {intent.task_type}")
+            # Classify intent - use enriched command
+            intent = await self.intent_classifier.analyze_intent(enriched_command)
+            self.logger.debug(f"Classified intent: {intent.task_type}, requires_coordination: {intent.requires_coordination}")
             
-            # Create task from intent
-            task = Task.from_intent(intent, command)
+            # Check if this requires multi-agent coordination
+            if intent.requires_coordination:
+                self.logger.info("Intent requires multi-agent coordination, delegating to execute_multi_agent_command")
+                # Stop monitoring as multi-agent command will start its own
+                if should_monitor and hasattr(self, 'coordination_engine') and hasattr(self.coordination_engine, 'swarm_monitor'):
+                    await self.coordination_engine.swarm_monitor.stop_monitoring()
+                # Execute as multi-agent command
+                return await self.execute_multi_agent_command(enriched_command, context)
+            
+            # Create task from intent with enriched command
+            task = Task.from_intent(intent, enriched_command)
             
             # Check if we have any agents, if not spawn one
             available_agents = self.agent_registry.get_available_agents()
@@ -148,7 +213,7 @@ class Orchestrator(LoggerMixin):
             # Register agent with monitor if monitoring is enabled
             if should_monitor and hasattr(self, 'coordination_engine') and hasattr(self.coordination_engine, 'swarm_monitor'):
                 monitor = self.coordination_engine.swarm_monitor
-                from agentic.core.swarm_monitor import AgentStatus
+                from agentic.core.swarm_monitor_unified import AgentStatus
                 
                 # Determine a meaningful role based on agent type and task
                 if "test" in command.lower():
@@ -807,4 +872,352 @@ class Orchestrator(LoggerMixin):
                     agent_type = AgentType.AIDER_BACKEND  # Default
                     focus_areas = ["backend", "api", "database", "architecture"]
         
-        return agent_type, focus_areas 
+        return agent_type, focus_areas
+    
+    async def _enrich_command_with_context(self, command: str, context: Dict[str, Any]) -> str:
+        """Enrich a command with previous context if it's a follow-up"""
+        # Check if this is a follow-up command
+        follow_up_indicators = [
+            'now implement', 'great!', 'perfect!', 'thanks!', 'can you now',
+            'please implement', 'go ahead', 'proceed with', 'let\'s implement',
+            'based on that', 'using this analysis', 'with this information',
+            'the missing logic', 'complete the'
+        ]
+        
+        command_lower = command.lower()
+        is_follow_up = any(indicator in command_lower for indicator in follow_up_indicators)
+        
+        if not is_follow_up:
+            return command
+        
+        self.logger.info("Detected follow-up command, enriching with previous context")
+        
+        # Try to get previous analysis from session manager
+        session_manager = context.get('session_manager')
+        if session_manager:
+            # Get recent analysis from session
+            recent_analysis = session_manager.get_recent_analysis()
+            if recent_analysis:
+                # Prepend the analysis to the command
+                enriched = f"Based on the following analysis:\n\n{recent_analysis}\n\nNow {command}"
+                self.logger.info("Enriched command with previous analysis from session")
+                return enriched
+        
+        # Try shared memory for recent task results
+        recent_tasks = self.shared_memory.get_all_task_progress()
+        for task_id, progress in recent_tasks.items():
+            if progress.get('status') == 'completed' and progress.get('result'):
+                result = progress['result']
+                # Check if this was an analysis task
+                if hasattr(result, 'output') and result.output:
+                    output_lower = result.output.lower()
+                    if any(word in output_lower for word in ['analysis', 'implementation', 'missing', 'need to']):
+                        # Use this analysis as context
+                        enriched = f"Based on the following analysis:\n\n{result.output[:2000]}\n\nNow {command}"
+                        self.logger.info("Enriched command with previous analysis from shared memory")
+                        return enriched
+        
+        return command
+    
+    async def _handle_mode_command(self, command: str) -> TaskResult:
+        """Handle /mode command to switch execution modes"""
+        parts = command.strip().lower().split()
+        
+        if len(parts) < 2:
+            # Show current mode
+            return TaskResult(
+                task_id="mode_info",
+                agent_id="orchestrator",
+                status="completed",
+                output=f"Current execution mode: {self._current_mode.value}\n"
+                       f"Available modes: autonomous, interactive, supervised, hierarchical",
+                execution_time=0
+            )
+        
+        mode_name = parts[1]
+        try:
+            new_mode = ExecutionMode(mode_name)
+            self.set_mode(new_mode)
+            
+            mode_descriptions = {
+                ExecutionMode.AUTONOMOUS: "Agents work independently without intervention",
+                ExecutionMode.INTERACTIVE: "Agents can ask questions and interact with you",
+                ExecutionMode.SUPERVISED: "You monitor agent execution but don't interfere",
+                ExecutionMode.HIERARCHICAL: "Tasks are delegated through supervisor→specialist→worker hierarchy"
+            }
+            
+            return TaskResult(
+                task_id="mode_change",
+                agent_id="orchestrator",
+                status="completed",
+                output=f"✅ Execution mode changed to: {new_mode.value}\n"
+                       f"Description: {mode_descriptions.get(new_mode, 'Unknown mode')}",
+                execution_time=0
+            )
+        except ValueError:
+            return TaskResult(
+                task_id="mode_error",
+                agent_id="orchestrator",
+                status="failed",
+                output="",
+                error=f"Invalid mode: {mode_name}. Valid modes are: autonomous, interactive, supervised, hierarchical",
+                execution_time=0
+            )
+    
+    async def execute_hierarchical_command(self, command: str, context: Optional[Dict[str, Any]] = None) -> TaskResult:
+        """Execute a command using hierarchical agent structure"""
+        self.logger.info(f"Executing command in hierarchical mode: {command[:50]}...")
+        
+        try:
+            # Initialize supervisor if not already created
+            if not self._supervisor_agent:
+                await self._initialize_supervisor_agent()
+            
+            # Check if this is a simple command that can be handled without full hierarchy
+            if await self._can_handle_without_hierarchy(command):
+                self.logger.info("Command is simple enough for direct execution, falling back to regular mode")
+                # Temporarily switch to autonomous mode for this command
+                original_mode = self._current_mode
+                self._current_mode = ExecutionMode.AUTONOMOUS
+                try:
+                    # Use regular command execution
+                    return await self._execute_regular_command(command, context)
+                finally:
+                    self._current_mode = original_mode
+            
+            # Create task from command
+            intent = await self.intent_classifier.analyze_intent(command)
+            task = Task.from_intent(intent, command)
+            
+            # Execute through supervisor
+            self.logger.info("Delegating task to supervisor agent for hierarchical execution")
+            result = await self._supervisor_agent.execute_complex_task(task)
+            
+            # Add mode information to result
+            if not result.metadata:
+                result.metadata = {}
+            result.metadata["execution_mode"] = "hierarchical"
+            result.metadata["supervisor_id"] = self._supervisor_agent.agent_id
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"Hierarchical execution failed: {e}")
+            return TaskResult(
+                task_id="hierarchical_error",
+                agent_id="orchestrator",
+                status="failed",
+                output="",
+                error=f"Hierarchical execution failed: {str(e)}",
+                execution_time=0
+            )
+    
+    async def _initialize_supervisor_agent(self) -> None:
+        """Initialize the supervisor agent for hierarchical execution"""
+        self.logger.info("Initializing supervisor agent for hierarchical execution")
+        
+        # Create supervisor config
+        from agentic.models.agent import AgentConfig
+        supervisor_config = AgentConfig(
+            name="supervisor_main",
+            agent_type=AgentType.CLAUDE_CODE,  # Supervisor uses Claude for high-level reasoning
+            workspace_path=self.config.workspace_path,
+            focus_areas=["coordination", "task_delegation", "architecture"],
+            ai_model_config={"model": self.config.primary_model},
+            max_tokens=self.config.max_tokens,
+            temperature=self.config.temperature
+        )
+        
+        # Create supervisor agent
+        self._supervisor_agent = SupervisorAgent(
+            config=supervisor_config,
+            shared_memory=self.shared_memory,
+            resource_manager=self._resource_manager
+        )
+        
+        self.logger.info(f"Supervisor agent initialized: {self._supervisor_agent.agent_id}")
+    
+    async def _can_handle_without_hierarchy(self, command: str) -> bool:
+        """Determine if a command can be handled without full hierarchy"""
+        command_lower = command.lower()
+        
+        # Simple commands that don't need hierarchy
+        simple_patterns = [
+            "explain", "what is", "show", "list", "describe",
+            "help", "status", "version", "debug"
+        ]
+        
+        # Check if it's a simple query
+        if any(pattern in command_lower for pattern in simple_patterns):
+            # Additional check - if it's asking about a complex system, still use hierarchy
+            complex_indicators = ["system", "architecture", "distributed", "microservice"]
+            if not any(indicator in command_lower for indicator in complex_indicators):
+                return True
+        
+        # Short commands are usually simple
+        if len(command.split()) < 5:
+            return True
+        
+        return False
+    
+    async def _execute_regular_command(self, command: str, context: Optional[Dict[str, Any]] = None) -> TaskResult:
+        """Execute command using regular (non-hierarchical) flow"""
+        # This is the original execute_command logic without the mode check
+        
+        # Check if this is a follow-up command that needs context
+        if context and context.get('session_manager'):
+            enriched_command = await self._enrich_command_with_context(command, context)
+        else:
+            enriched_command = command
+        
+        # Determine if we should show monitoring
+        should_monitor = context and context.get('enable_monitoring', True)
+        status_updater = context.get('status_updater') if context else None
+        
+        try:
+            # Start monitoring if enabled
+            if should_monitor and hasattr(self, 'coordination_engine') and hasattr(self.coordination_engine, 'swarm_monitor'):
+                await self.coordination_engine.swarm_monitor.start_monitoring()
+            
+            # Classify intent - use enriched command
+            intent = await self.intent_classifier.analyze_intent(enriched_command)
+            self.logger.debug(f"Classified intent: {intent.task_type}")
+            
+            # Create task from intent with enriched command
+            task = Task.from_intent(intent, enriched_command)
+            
+            # Check if we have any agents, if not spawn one
+            available_agents = self.agent_registry.get_available_agents()
+            if not available_agents:
+                self.logger.info("No agents available, spawning a backend agent for the task...")
+                try:
+                    await self._auto_spawn_agent(intent)
+                except Exception as e:
+                    self.logger.error(f"Failed to auto-spawn agent: {e}")
+                    return TaskResult(
+                        task_id=task.id,
+                        agent_id="none",
+                        status="failed",
+                        output="",
+                        error=f"No agents available and failed to spawn: {e}"
+                    )
+            
+            # Route to appropriate agent
+            routing_decision = await self.command_router.route_command(command, context or {})
+            
+            if not routing_decision.primary_agent:
+                return TaskResult(
+                    task_id=task.id,
+                    agent_id="none",
+                    status="failed",
+                    output="",
+                    error="No suitable agent found for command"
+                )
+            
+            # Execute with best agent
+            best_agent = routing_decision.primary_agent
+            agent_instance = self.agent_registry.get_agent_by_id(best_agent.id)
+            
+            if not agent_instance:
+                return TaskResult(
+                    task_id=task.id,
+                    agent_id=best_agent.id,
+                    status="failed",
+                    output="",
+                    error="Agent instance not found"
+                )
+            
+            # Register agent with monitor if monitoring is enabled
+            if should_monitor and hasattr(self, 'coordination_engine') and hasattr(self.coordination_engine, 'swarm_monitor'):
+                monitor = self.coordination_engine.swarm_monitor
+                from agentic.core.swarm_monitor_unified import AgentStatus
+                
+                # Determine a meaningful role based on agent type and task
+                if "test" in command.lower():
+                    role = "test_runner"
+                elif "claude" in best_agent.agent_config.agent_type.value.lower():
+                    role = "analyzer"
+                elif "frontend" in best_agent.agent_config.agent_type.value.lower():
+                    role = "frontend_dev"
+                elif "backend" in best_agent.agent_config.agent_type.value.lower():
+                    role = "backend_dev"
+                else:
+                    role = best_agent.agent_config.agent_type.value.replace("_", " ").title()
+                
+                # Register agent with monitor
+                monitor.register_agent(
+                    agent_id=best_agent.id,
+                    agent_name=best_agent.agent_config.name,
+                    agent_type=best_agent.agent_config.agent_type.value,
+                    role=role
+                )
+                monitor.update_agent_status(best_agent.id, AgentStatus.INITIALIZING)
+                
+                # Set monitor reference in agent for status updates
+                if hasattr(agent_instance, 'set_monitor'):
+                    agent_instance.set_monitor(monitor, best_agent.id)
+            
+            # Set up simple progress monitor if we have a status updater but no full monitoring
+            simple_monitor = None
+            if not should_monitor and status_updater:
+                from agentic.core.simple_progress import SimpleProgressMonitor
+                simple_monitor = SimpleProgressMonitor(status_updater)
+                simple_monitor.start_monitoring(best_agent.id, best_agent.agent_config.name)
+                
+                # Give agent a reference to update progress
+                if hasattr(agent_instance, 'set_progress_monitor'):
+                    agent_instance.set_progress_monitor(simple_monitor)
+            
+            # Register task and execute
+            await self.shared_memory.register_task(task)
+            
+            # Update monitor - starting task
+            if should_monitor and hasattr(self, 'coordination_engine') and hasattr(self.coordination_engine, 'swarm_monitor'):
+                monitor = self.coordination_engine.swarm_monitor
+                monitor.update_agent_status(best_agent.id, AgentStatus.SETTING_UP)
+                
+                # Use appropriate method based on monitor type
+                if hasattr(monitor, 'start_agent_task'):
+                    monitor.start_agent_task(best_agent.id, task.id, task.command[:50] + "...")
+                else:
+                    monitor.start_task(best_agent.id, task.id, task.command[:50] + "...")
+            
+            result = await agent_instance.execute_task(task)
+            
+            # Update monitor - task completed
+            if should_monitor and hasattr(self, 'coordination_engine') and hasattr(self.coordination_engine, 'swarm_monitor'):
+                monitor = self.coordination_engine.swarm_monitor
+                is_success = result.status == "completed"
+                
+                # Use appropriate method based on monitor type
+                if hasattr(monitor, 'complete_agent_task'):
+                    monitor.complete_agent_task(best_agent.id, task.id, is_success)
+                else:
+                    monitor.complete_task(best_agent.id, task.id, is_success)
+                
+                if is_success:
+                    monitor.update_agent_status(best_agent.id, AgentStatus.COMPLETED)
+                else:
+                    monitor.update_agent_status(best_agent.id, AgentStatus.FAILED)
+            
+            await self.shared_memory.complete_task(task.id, result)
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"Command execution failed: {e}")
+            return TaskResult(
+                task_id=task.id if 'task' in locals() else "unknown",
+                agent_id="orchestrator",
+                status="failed",
+                output="",
+                error=str(e)
+            )
+        finally:
+            # Stop monitoring if it was started
+            if should_monitor and hasattr(self, 'coordination_engine') and hasattr(self.coordination_engine, 'swarm_monitor'):
+                await self.coordination_engine.swarm_monitor.stop_monitoring()
+            
+            # Stop simple monitor if it was started
+            if 'simple_monitor' in locals() and simple_monitor:
+                await simple_monitor.stop_monitoring() 

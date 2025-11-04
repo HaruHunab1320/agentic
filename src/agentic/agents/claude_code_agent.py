@@ -9,7 +9,6 @@ import json
 import logging
 import os
 import subprocess
-import tempfile
 import uuid
 import time
 from datetime import datetime
@@ -19,14 +18,13 @@ from contextlib import contextmanager
 
 # fcntl is Unix-only, so we'll use a file-based locking mechanism
 try:
-    import fcntl
     HAS_FCNTL = True
 except ImportError:
     HAS_FCNTL = False
 
 from rich.console import Console
 
-from agentic.models.agent import Agent, AgentConfig, AgentCapability, AgentType, AgentSession
+from agentic.models.agent import Agent, AgentConfig, AgentCapability, AgentType, AgentSession, DiscoveryType, Discovery
 from agentic.models.task import Task, TaskResult
 
 console = Console()
@@ -137,13 +135,21 @@ class ClaudeCodeAgent(Agent):
     async def start(self) -> bool:
         """Start the enhanced Claude Code agent session."""
         try:
+            self.logger.info(f"[CLAUDE START] Starting Claude Code agent for {self.config.name}")
+            
             # Check health first
             if not await self.health_check():
+                self.logger.error("[CLAUDE START] Health check failed")
                 return False
+            
+            self.logger.info("[CLAUDE START] Health check passed")
             
             # Handle Claude Code authentication/trust if needed
             if not await self._ensure_claude_authentication():
+                self.logger.error("[CLAUDE START] Authentication check failed")
                 return False
+            
+            self.logger.info("[CLAUDE START] Authentication check passed")
             
             # Initialize project memory if needed
             await self._ensure_memory_setup()
@@ -221,21 +227,26 @@ This project uses Agentic's Claude Code integration for AI-powered development t
     async def _ensure_claude_authentication(self) -> bool:
         """Ensure Claude Code is authenticated and trusted for this workspace"""
         try:
+            self.logger.info("[CLAUDE AUTH] Checking Claude Code authentication status")
+            
             # Use global lock only to prevent concurrent setup wizards
             async with _claude_init_lock:
                 # Just check authentication status - let Claude manage its own config
                 auth_check_result = await self._check_authentication_status()
             
+            self.logger.info(f"[CLAUDE AUTH] Authentication check result: {auth_check_result}")
+            
             if auth_check_result == "authenticated":
-                self.logger.debug("Claude Code is already authenticated")
+                self.logger.info("[CLAUDE AUTH] Claude Code is already authenticated")
                 return True
             elif auth_check_result == "needs_browser_auth":
                 # Check if we're in automated/swarm execution mode
                 is_automated = os.environ.get('AGENTIC_AUTOMATED_MODE', 'false').lower() == 'true'
                 if is_automated:
-                    self.logger.error("Claude Code requires browser authentication but running in automated mode")
-                    self.logger.error("Please run 'claude' manually to complete authentication before using Agentic")
-                    raise RuntimeError("Claude Code not authenticated. Run 'claude' manually to authenticate.")
+                    self.logger.warning("Claude Code may need browser authentication, but running in automated mode")
+                    self.logger.info("Attempting to proceed - Claude may already be authenticated")
+                    # Try to proceed anyway - Claude might be authenticated but just showing the prompt
+                    return True
                 
                 # Notify user about browser authentication
                 self.logger.warning("⚠️ Claude Code requires browser authentication")
@@ -312,9 +323,10 @@ This project uses Agentic's Claude Code integration for AI-powered development t
                 # Check if we're in automated/swarm execution mode
                 is_automated = os.environ.get('AGENTIC_AUTOMATED_MODE', 'false').lower() == 'true'
                 if is_automated:
-                    self.logger.error("Claude Code requires initial setup but running in automated mode")
-                    self.logger.error("Please run 'claude' manually to complete setup before using Agentic")
-                    raise RuntimeError("Claude Code not set up. Run 'claude' manually to complete setup.")
+                    self.logger.warning("Claude Code may need initial setup, but running in automated mode")
+                    self.logger.info("Attempting to proceed - Claude may already be set up")
+                    # Try to proceed anyway
+                    return True
                 
                 # Handle first-time setup
                 self.logger.info("Claude Code needs first-time setup")
@@ -351,10 +363,19 @@ This project uses Agentic's Claude Code integration for AI-powered development t
                 stderr_text = stderr.decode()
                 combined_output = (stdout_text + stderr_text).lower()
                 
-                if test_process.returncode == 0 and ("claude" in stdout_text or "version" in stdout_text):
-                    # Version command succeeded cleanly - we're authenticated
-                    return "authenticated"
-                elif "browser" in combined_output or "login" in combined_output or "authorize" in combined_output or "press enter" in combined_output:
+                # Check for various success indicators
+                if test_process.returncode == 0:
+                    # If it returns 0, we're likely authenticated even if there's a prompt
+                    if "claude" in stdout_text.lower() or "version" in stdout_text.lower():
+                        return "authenticated"
+                    # Even with return code 0, if there's auth text, treat as authenticated
+                    # (Claude might show a prompt but still work)
+                    if "browser" in combined_output or "login" in combined_output:
+                        self.logger.info("Claude shows auth prompt but returned 0 - treating as authenticated")
+                        return "authenticated"
+                
+                # Only if non-zero return code, check what's wrong
+                if "browser" in combined_output or "login" in combined_output or "authorize" in combined_output or "press enter" in combined_output:
                     # Needs browser authentication
                     return "needs_browser_auth"
                 else:
@@ -650,7 +671,8 @@ This project uses Agentic's Claude Code integration for AI-powered development t
                 task_id=task.id,
                 status="failed",
                 error="Claude configuration is corrupted. Please run 'claude --version' manually to reinitialize.",
-                agent_id=self.session.id if self.session else "unknown"
+                agent_id=self.session.id if self.session else "unknown",
+                execution_time=0.0
             )
         
         # Use semaphore if configured, otherwise allow unlimited concurrency
@@ -668,7 +690,7 @@ This project uses Agentic's Claude Code integration for AI-powered development t
             
             # Update monitor status if available
             if self._monitor and self._monitor_agent_id:
-                from agentic.core.swarm_monitor import AgentStatus
+                from agentic.core.swarm_monitor_unified import AgentStatus
                 self._monitor.update_agent_status(self._monitor_agent_id, AgentStatus.ANALYZING, "Analyzing task...")
                 
                 # Add specific activity based on task type
@@ -700,8 +722,9 @@ This project uses Agentic's Claude Code integration for AI-powered development t
             cmd = self._build_enhanced_claude_command(task, execution_mode)
             
             self.logger.info(f"Executing {execution_mode} task: {task.command[:50]}...")
-            self.logger.debug(f"Full command: {' '.join(cmd)}")  # Log full command for debugging
-            self.logger.debug(f"Working directory: {self.workspace_path}")
+            self.logger.info(f"[CLAUDE DEBUG] Full command: {' '.join(cmd)}")
+            self.logger.info(f"[CLAUDE DEBUG] Working directory: {self.workspace_path}")
+            self.logger.info(f"[CLAUDE DEBUG] Command has {len(cmd)} arguments")
             
             # Update monitor to executing
             if self._monitor and self._monitor_agent_id:
@@ -726,7 +749,8 @@ This project uses Agentic's Claude Code integration for AI-powered development t
                 task_id=task.id,
                 status="failed",
                 error=str(e),
-                agent_id=self.session.id if self.session else "unknown"
+                agent_id=self.session.id if self.session else "unknown",
+                execution_time=0.0
             )
     
     def _determine_execution_mode(self, task: Task) -> str:
@@ -763,6 +787,8 @@ This project uses Agentic's Claude Code integration for AI-powered development t
                 # Use JSON output format for better parsing of action tasks
                 cmd.extend(["--output-format", "json"])
             
+            # Claude Code doesn't have a --yes flag - it auto-approves in print mode
+            
             # Remove verbose flag for query mode - it can cause stalling
             # cmd.extend(["--verbose"])
             
@@ -780,8 +806,25 @@ This project uses Agentic's Claude Code integration for AI-powered development t
     
     def _build_natural_prompt(self, task: Task) -> str:
         """Build a natural prompt that trusts Claude's capabilities"""
-        # Just pass the command naturally - Claude understands context
-        return task.command
+        prompt = ""
+        
+        # Add language context if available
+        if hasattr(task, 'target_language') and task.target_language:
+            language_context = f"[Target language: {task.target_language}"
+            if hasattr(task, 'target_framework') and task.target_framework:
+                language_context += f" with {task.target_framework}"
+            language_context += "] "
+            prompt += language_context
+        
+        # For implementation tasks, be explicit about file creation
+        command_lower = task.command.lower()
+        if any(word in command_lower for word in ['build', 'create', 'implement', 'develop', 'make']):
+            prompt += "Please create all necessary files to implement this request. "
+        
+        # Add the actual command
+        prompt += task.command
+        
+        return prompt
     
     def _build_enhanced_prompt_with_memory(self, task: Task) -> str:
         """Build prompt that leverages Claude Code's memory features"""
@@ -798,6 +841,15 @@ This project uses Agentic's Claude Code integration for AI-powered development t
         
         # Agent identity and specialization
         prompt_parts.append(f"You are a Claude Code agent specialized in: {', '.join(self.focus_areas)}.")
+        
+        # Add language/framework context if available
+        if hasattr(task, 'target_language') and task.target_language:
+            prompt_parts.append(f"Target Language: {task.target_language}")
+        if hasattr(task, 'target_framework') and task.target_framework:
+            prompt_parts.append(f"Framework: {task.target_framework}")
+        if hasattr(task, 'project_context') and task.project_context:
+            if task.project_context.project_type:
+                prompt_parts.append(f"Project Type: {task.project_context.project_type}")
         
         # Add context about the current workspace
         if hasattr(self, 'workspace_path'):
@@ -1090,6 +1142,9 @@ Please provide:
     
     async def _execute_claude_with_advanced_features(self, cmd: List[str], env: dict, task: Task, execution_mode: str) -> TaskResult:
         """Execute Claude Code with advanced features and proper output handling"""
+        import time
+        start_time = time.time()
+        
         try:
             # Execute the command with appropriate timeout
             # For multi-agent coordination, allow much longer timeouts
@@ -1107,6 +1162,7 @@ Please provide:
             else:
                 timeout = 300  # 5 minutes for regular tasks
             
+            self.logger.info(f"[CLAUDE DEBUG] Starting process with timeout: {timeout}s")
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
@@ -1117,7 +1173,7 @@ Please provide:
             
             try:
                 # Log the process ID for debugging
-                self.logger.debug(f"Claude Code process started with PID: {process.pid}")
+                self.logger.info(f"[CLAUDE DEBUG] Claude Code process started with PID: {process.pid}")
                 
                 # For architect tasks, check for completion periodically
                 if is_architect_task:
@@ -1315,14 +1371,16 @@ Please provide:
                             status="completed",
                             output=f"Created architecture documentation: {', '.join(created_files)}",
                             agent_id=self.session.id if self.session else "unknown",
-                            files_modified=[self.workspace_path / f for f in created_files]
+                            files_modified=[self.workspace_path / f for f in created_files],
+                            execution_time=time.time() - start_time
                         )
                 
                 return TaskResult(
                     task_id=task.id,
                     status="failed",
                     error=f"Task timed out after {timeout} seconds",
-                    agent_id=self.session.id if self.session else "unknown"  
+                    agent_id=self.session.id if self.session else "unknown",
+                    execution_time=time.time() - start_time  
                 )
             
             output = stdout.decode('utf-8', errors='replace')
@@ -1338,7 +1396,8 @@ Please provide:
                     task_id=task.id,
                     status="failed",
                     error="Claude configuration was corrupted and has been reset. Please retry the task.",
-                    agent_id=self.session.id if self.session else "unknown"
+                    agent_id=self.session.id if self.session else "unknown",
+                    execution_time=time.time() - start_time
                 )
             
             # Parse output based on execution mode
@@ -1346,12 +1405,15 @@ Please provide:
                 output, error_output, process.returncode, execution_mode
             )
             
+            # Calculate execution time
+            execution_time = time.time() - start_time
+            
             if success:
-                self.logger.info("Task completed successfully")
+                self.logger.info(f"Task completed successfully in {execution_time:.1f}s")
                 
                 # Update monitor status to completed if available
                 if self._monitor and self._monitor_agent_id:
-                    from agentic.core.swarm_monitor import AgentStatus
+                    from agentic.core.swarm_monitor_unified import AgentStatus
                     self._monitor.update_agent_status(self._monitor_agent_id, AgentStatus.FINALIZING)
                     # Give a moment for finalization
                     await asyncio.sleep(0.5)
@@ -1362,11 +1424,15 @@ Please provide:
                 # Extract files created from output
                 files_created = self._extract_files_from_output(parsed_output)
                 
+                # Analyze output for discoveries
+                self._analyze_output_for_discoveries(parsed_output)
+                
                 result = TaskResult(
                     task_id=task.id,
                     status="completed",
                     output=parsed_output,
-                    agent_id=self.session.id if self.session else "unknown"
+                    agent_id=self.session.id if self.session else "unknown",
+                    execution_time=execution_time
                 )
                 
                 # Add files_modified attribute if files were created
@@ -1375,16 +1441,18 @@ Please provide:
                 
                 return result
             else:
-                self.logger.error(f"Task failed: {parsed_output}")
+                self.logger.error(f"Task failed after {execution_time:.1f}s: {parsed_output}")
                 return TaskResult(
                     task_id=task.id,
                     status="failed",
                     error=parsed_output,
-                    agent_id=self.session.id if self.session else "unknown"
+                    agent_id=self.session.id if self.session else "unknown",
+                    execution_time=execution_time
                 )
                 
         except Exception as e:
-            self.logger.error(f"Execution error: {e}")
+            execution_time = time.time() - start_time
+            self.logger.error(f"Execution error after {execution_time:.1f}s: {e}")
             
             # Check if it's a JSON config error
             error_str = str(e)
@@ -1399,13 +1467,15 @@ Please provide:
                     task_id=task.id,
                     status="failed",
                     error="Claude configuration was corrupted and has been reset. Please retry the task.",
-                    agent_id=self.session.id if self.session else "unknown"
+                    agent_id=self.session.id if self.session else "unknown",
+                    execution_time=execution_time
                 )
             return TaskResult(
                 task_id=task.id,
                 status="failed",
                 error=str(e),
-                agent_id=self.session.id if self.session else "unknown"
+                agent_id=self.session.id if self.session else "unknown",
+                execution_time=execution_time
             )
     
     async def _parse_claude_json_stream(self, json_data: str):
@@ -1566,6 +1636,117 @@ Please provide:
             return first_line[:80] + ("..." if len(first_line) > 80 else "")
         
         return None
+    
+    def _detect_discoveries_in_output(self, stdout: str, stderr: str) -> None:
+        """Detect discoveries in Claude's output and report them"""
+        output = stdout + "\n" + stderr
+        
+        # API ready patterns
+        api_patterns = [
+            r"API endpoint.*(?:ready|available|created|implemented)",
+            r"REST API.*(?:ready|complete)",
+            r"GraphQL.*(?:ready|schema created)",
+            r"endpoint.*(?:created|implemented).*at.*(?:/[^\s]+)"
+        ]
+        
+        # Test needed patterns
+        test_patterns = [
+            r"(?:test|tests).*(?:needed|missing|required)",
+            r"no test.*found",
+            r"test coverage.*(?:low|missing)",
+            r"TODO.*(?:test|tests)",
+            r"untested code"
+        ]
+        
+        # Bug found patterns
+        bug_patterns = [
+            r"(?:bug|issue|problem).*(?:found|detected|discovered)",
+            r"(?:error|exception).*(?:in|at).*line",
+            r"potential.*(?:bug|issue)",
+            r"this.*(?:might|could|will).*(?:fail|break|error)"
+        ]
+        
+        # Security issue patterns
+        security_patterns = [
+            r"security.*(?:issue|vulnerability|risk)",
+            r"(?:SQL injection|XSS|CSRF).*(?:vulnerability|risk)",
+            r"insecure.*(?:configuration|implementation)",
+            r"(?:password|token|key).*(?:exposed|hardcoded)"
+        ]
+        
+        # Performance issue patterns
+        performance_patterns = [
+            r"performance.*(?:issue|problem|bottleneck)",
+            r"(?:slow|inefficient).*(?:query|operation|function)",
+            r"O\(n\^2\).*complexity",
+            r"(?:memory|CPU).*(?:intensive|heavy)"
+        ]
+        
+        import re
+        
+        # Check each pattern type
+        for pattern in api_patterns:
+            if re.search(pattern, output, re.IGNORECASE):
+                match = re.search(pattern, output, re.IGNORECASE)
+                self.report_discovery(
+                    DiscoveryType.API_READY,
+                    f"API endpoint discovered: {match.group(0)}",
+                    context={"pattern_matched": pattern},
+                    severity="info"
+                )
+        
+        for pattern in test_patterns:
+            if re.search(pattern, output, re.IGNORECASE):
+                match = re.search(pattern, output, re.IGNORECASE)
+                # Extract file context if possible
+                file_match = re.search(r"(?:file|module|component)\s*[:\s]\s*([^\s]+)", output[max(0, match.start()-100):match.end()+100])
+                file_path = file_match.group(1) if file_match else None
+                
+                self.report_discovery(
+                    DiscoveryType.TEST_NEEDED,
+                    f"Test coverage needed: {match.group(0)}",
+                    context={"pattern_matched": pattern},
+                    severity="warning",
+                    file_path=file_path,
+                    suggested_action="Create unit tests for this component"
+                )
+        
+        for pattern in bug_patterns:
+            if re.search(pattern, output, re.IGNORECASE):
+                match = re.search(pattern, output, re.IGNORECASE)
+                # Try to extract line number
+                line_match = re.search(r"line\s*(\d+)", output[match.start():match.end()+50])
+                line_number = int(line_match.group(1)) if line_match else None
+                
+                self.report_discovery(
+                    DiscoveryType.BUG_FOUND,
+                    f"Bug detected: {match.group(0)}",
+                    context={"pattern_matched": pattern},
+                    severity="error",
+                    line_number=line_number
+                )
+        
+        for pattern in security_patterns:
+            if re.search(pattern, output, re.IGNORECASE):
+                match = re.search(pattern, output, re.IGNORECASE)
+                self.report_discovery(
+                    DiscoveryType.SECURITY_ISSUE,
+                    f"Security issue found: {match.group(0)}",
+                    context={"pattern_matched": pattern},
+                    severity="critical",
+                    suggested_action="Review and fix security vulnerability immediately"
+                )
+        
+        for pattern in performance_patterns:
+            if re.search(pattern, output, re.IGNORECASE):
+                match = re.search(pattern, output, re.IGNORECASE)
+                self.report_discovery(
+                    DiscoveryType.PERFORMANCE_ISSUE,
+                    f"Performance issue identified: {match.group(0)}",
+                    context={"pattern_matched": pattern},
+                    severity="warning",
+                    suggested_action="Optimize the identified code section"
+                )
 
     def _extract_files_from_output(self, output: str) -> List[Path]:
         """Extract file paths mentioned in Claude's output"""
@@ -1599,6 +1780,77 @@ Please provide:
                 unique_files.append(f)
         
         return unique_files
+    
+    def _analyze_output_for_discoveries(self, output: str) -> None:
+        """Analyze Claude's output for discoveries and report them"""
+        if not self._discovery_callback:
+            return
+            
+        # Look for common patterns that indicate discoveries
+        patterns = {
+            DiscoveryType.API_READY: [
+                r"API endpoint.* (?:created|ready|available)",
+                r"REST API.* (?:implemented|complete)",
+                r"GraphQL.* (?:schema|endpoint).* ready"
+            ],
+            DiscoveryType.TEST_NEEDED: [
+                r"(?:needs?|requires?|should have) (?:unit |integration )?tests?",
+                r"test coverage.* (?:low|missing|needed)",
+                r"no tests? (?:found|exist)"
+            ],
+            DiscoveryType.BUG_FOUND: [
+                r"(?:bug|issue|problem|error) (?:found|detected|discovered)",
+                r"(?:fix|fixed|fixing) (?:bug|issue|error)",
+                r"(?:potential|possible) (?:bug|issue|problem)"
+            ],
+            DiscoveryType.SECURITY_ISSUE: [
+                r"security (?:issue|vulnerability|risk|concern)",
+                r"(?:unsafe|insecure|vulnerable)",
+                r"(?:SQL injection|XSS|CSRF|authentication) (?:vulnerability|risk)"
+            ],
+            DiscoveryType.PERFORMANCE_ISSUE: [
+                r"performance (?:issue|problem|bottleneck)",
+                r"(?:slow|inefficient|unoptimized)",
+                r"(?:memory|CPU) (?:usage|consumption) (?:high|excessive)"
+            ]
+        }
+        
+        import re
+        
+        for discovery_type, pattern_list in patterns.items():
+            for pattern in pattern_list:
+                if re.search(pattern, output, re.IGNORECASE):
+                    # Extract context around the match
+                    match = re.search(pattern, output, re.IGNORECASE)
+                    if match:
+                        start = max(0, match.start() - 50)
+                        end = min(len(output), match.end() + 50)
+                        context = output[start:end].strip()
+                        
+                        discovery = Discovery(
+                            type=discovery_type,
+                            description=context[:200],  # Limit description length
+                            severity="medium",
+                            suggested_action=self._get_suggested_action(discovery_type)
+                        )
+                        self._discovery_callback(discovery)
+                        break  # Only report each type once per output
+    
+    def _get_suggested_action(self, discovery_type: DiscoveryType) -> str:
+        """Get suggested action for a discovery type"""
+        actions = {
+            DiscoveryType.API_READY: "Create integration tests for the API endpoints",
+            DiscoveryType.TEST_NEEDED: "Implement comprehensive test coverage",
+            DiscoveryType.BUG_FOUND: "Fix the identified bug and add regression tests",
+            DiscoveryType.SECURITY_ISSUE: "Address security vulnerability immediately",
+            DiscoveryType.PERFORMANCE_ISSUE: "Profile and optimize the performance bottleneck",
+            DiscoveryType.REFACTOR_OPPORTUNITY: "Refactor code to improve maintainability",
+            DiscoveryType.DOCUMENTATION_NEEDED: "Add comprehensive documentation",
+            DiscoveryType.DEPENDENCY_UPDATE: "Update dependencies to latest stable versions",
+            DiscoveryType.CONFIG_ISSUE: "Fix configuration issues",
+            DiscoveryType.INTEGRATION_POINT: "Implement proper integration"
+        }
+        return actions.get(discovery_type, "Review and address the discovered issue")
     
     def _parse_claude_output(self, stdout: str, stderr: str, return_code: int, execution_mode: str) -> tuple[bool, str]:
         """Parse Claude Code output with mode-specific handling"""

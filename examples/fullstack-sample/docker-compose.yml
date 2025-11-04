@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:80"
+    volumes:
+      - ./backend/app:/app
+    environment:
+      # Add any environment variables your backend needs
+      # EXAMPLE_ENV_VAR: example_value
+      PYTHONUNBUFFERED: 1 # Recommended for seeing logs in real-time
+    # command: uvicorn app.main:app --host 0.0.0.0 --port 80 --reload # Use this for development with auto-reload
+
+  # Placeholder for frontend service
+  # frontend:
+  #   build: ./frontend
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./frontend/src:/app/src # Mount src for hot-reloading if applicable
+  #   depends_on:
+  #     - backend
+
+  # Placeholder for database service
+  # db:
+  #   image: postgres:13
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data/
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     POSTGRES_USER: user
+  #     POSTGRES_PASSWORD: password
+  #     POSTGRES_DB: todo_db
+
+# volumes:
+#   postgres_data:
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend:/usr/src/app # Mounts the backend code for live reloading
+      - /usr/src/app/node_modules # Excludes node_modules from being overwritten by the host
+    env_file:
+      - ./backend/.env # Load environment variables from .env file
+    depends_on:
+      - db
+      - redis
+    environment:
+      # Ensure these are set if not in .env or to override .env
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=${PORT:-3001}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-mysecretpassword}
+      - DB_NAME=${DB_NAME:-collaborative_editor}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-in-compose} # It's better to use .env for secrets
+    command: npm run dev # Uses nodemon for development
+
+  db:
+    image: postgres:14-alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Persist database data
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-mysecretpassword}
+      POSTGRES_DB: ${DB_NAME:-collaborative_editor}
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data # Persist Redis data
+
+volumes:
+  postgres_data:
+  redis_data:

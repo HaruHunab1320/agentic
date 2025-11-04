@@ -4,9 +4,9 @@ Project structure analysis and technology stack detection
 
 import json
 from pathlib import Path
-from typing import Dict, List, Set
+from typing import List, Set
 
-from agentic.models.project import DependencyGraph, ProjectStructure, TechStack
+from agentic.models.project import ProjectStructure, TechStack
 from agentic.utils.logging import LoggerMixin
 
 

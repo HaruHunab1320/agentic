@@ -8,11 +8,10 @@ import time
 import traceback
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Callable, Awaitable
-from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 

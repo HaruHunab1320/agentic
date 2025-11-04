@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Any, Set
 from pathlib import Path
@@ -14,8 +14,7 @@ from pydantic import BaseModel, Field
 from ..models.agent import Agent, AgentConfig, AgentType
 from ..models.task import Task, TaskResult, TaskIntent, TaskType
 from .shared_memory import SharedMemory
-# TODO: Implement ResourceManager in Phase 6
-# from .resource_manager import ResourceManager
+from .resource_manager import ResourceManager
 from .agent_registry import AgentRegistry
 
 
@@ -173,7 +172,7 @@ class LoadBalancer:
 class SupervisorAgent(Agent):
     """High-level supervisor agent that manages specialist agents"""
     
-    def __init__(self, config: AgentConfig, shared_memory: SharedMemory):
+    def __init__(self, config: AgentConfig, shared_memory: SharedMemory, resource_manager: Optional[ResourceManager] = None):
         super().__init__(config)
         self.shared_memory = shared_memory  # Store separately since Agent doesn't expect it
         self.hierarchy_level = AgentHierarchyLevel.SUPERVISOR
@@ -181,9 +180,10 @@ class SupervisorAgent(Agent):
         self.delegation_strategy = DelegationStrategy.SPECIALIZED
         self.task_analyzer = TaskAnalyzer()
         self.delegation_planner = DelegationPlanner()
+        self.resource_manager = resource_manager or ResourceManager()
         self.agent_spawner = DynamicAgentSpawner(
             AgentRegistry(config.workspace_path), 
-            None  # TODO: Pass ResourceManager when available
+            self.resource_manager
         )
         # Add agent_id property for compatibility
         self.agent_id = f"supervisor_{uuid.uuid4().hex[:8]}"
@@ -271,7 +271,8 @@ class SupervisorAgent(Agent):
                 specialist = SpecialistAgent(
                     domain=specialist_type,
                     config=specialist_config,
-                    shared_memory=self.shared_memory
+                    shared_memory=self.shared_memory,
+                    resource_manager=self.resource_manager
                 )
                 
                 # Agent base class doesn't have initialize() method
@@ -514,7 +515,7 @@ class WorkerAgent(Agent):
 class SpecialistAgent(Agent):
     """Mid-level specialist agent with domain expertise"""
     
-    def __init__(self, domain: str, config: AgentConfig, shared_memory: SharedMemory):
+    def __init__(self, domain: str, config: AgentConfig, shared_memory: SharedMemory, resource_manager: Optional[ResourceManager] = None):
         super().__init__(config)
         self.shared_memory = shared_memory  # Store separately since Agent doesn't expect it
         self.hierarchy_level = AgentHierarchyLevel.SPECIALIST
@@ -522,9 +523,10 @@ class SpecialistAgent(Agent):
         self.worker_agents: List[Agent] = []
         self.load_balancer = LoadBalancer()
         self.max_workers = 100  # Allow massive swarms for lightning-fast development
+        self.resource_manager = resource_manager or ResourceManager()
         self.agent_spawner = DynamicAgentSpawner(
             AgentRegistry(config.workspace_path),
-            None  # TODO: Pass ResourceManager when available
+            self.resource_manager
         )
         # Add agent_id property for compatibility
         self.agent_id = f"specialist_{domain}_{uuid.uuid4().hex[:8]}"
@@ -758,21 +760,44 @@ class SpecialistAgent(Agent):
             # Spawn additional workers
             workers_to_spawn = min(required_workers - current_workers, self.max_workers - current_workers)
             
+            # Check how many we can actually spawn based on resources
+            spawned_count = 0
             for i in range(workers_to_spawn):
-                worker_config = AgentConfig(
-                    name=f"worker_{self.domain}_{uuid.uuid4().hex[:8]}",
-                    agent_type=AgentType.CUSTOM,  # Use proper enum value
-                    workspace_path=self.config.workspace_path,  # Use parent's workspace
-                    focus_areas=[self.domain]
+                # Check if we have resources for this worker
+                worker_resources = {
+                    "cpu_cores": 0.5,  # Half a core per worker
+                    "memory_mb": 256,  # 256MB per worker
+                    "network_bandwidth": "low"
+                }
+                
+                if await self.resource_manager.can_allocate_resources(worker_resources):
+                    worker_config = AgentConfig(
+                        name=f"worker_{self.domain}_{uuid.uuid4().hex[:8]}",
+                        agent_type=AgentType.CUSTOM,  # Use proper enum value
+                        workspace_path=self.config.workspace_path,  # Use parent's workspace
+                        focus_areas=[self.domain]
+                    )
+                    
+                    worker = WorkerAgent(worker_config)
+                    worker.hierarchy_level = AgentHierarchyLevel.WORKER
+                    worker.agent_id = f"worker_{self.domain}_{uuid.uuid4().hex[:8]}"
+                    
+                    # Reserve resources for this worker
+                    if await self.resource_manager.reserve_resources(worker.agent_id, worker_resources):
+                        self.worker_agents.append(worker)
+                        spawned_count += 1
+                        logger.info(f"Spawned worker agent for {self.domain} domain")
+                    else:
+                        logger.warning(f"Failed to reserve resources for worker {i+1}/{workers_to_spawn}")
+                        break
+                else:
+                    logger.warning(f"Insufficient resources to spawn worker {i+1}/{workers_to_spawn}")
+                    break
+            
+            if spawned_count < workers_to_spawn:
+                logger.warning(
+                    f"Could only spawn {spawned_count}/{workers_to_spawn} workers due to resource constraints"
                 )
-                
-                worker = WorkerAgent(worker_config)
-                worker.hierarchy_level = AgentHierarchyLevel.WORKER
-                worker.agent_id = f"worker_{self.domain}_{uuid.uuid4().hex[:8]}"
-                # Agent base class doesn't have initialize() method
-                
-                self.worker_agents.append(worker)
-                logger.info(f"Spawned worker agent for {self.domain} domain")
     
     async def _synthesize_worker_results(self, task: Task, worker_results: List[TaskResult]) -> TaskResult:
         """Synthesize results from worker agents"""
@@ -820,9 +845,9 @@ class SpecialistAgent(Agent):
 class DynamicAgentSpawner:
     """Dynamically spawns agents based on workload and requirements"""
     
-    def __init__(self, agent_registry: AgentRegistry, resource_manager=None):
+    def __init__(self, agent_registry: AgentRegistry, resource_manager: ResourceManager):
         self.agent_registry = agent_registry
-        self.resource_manager = resource_manager  # TODO: Make required when ResourceManager implemented
+        self.resource_manager = resource_manager
         self.spawn_policies = self._load_spawn_policies()
         self.metrics_collector = WorkloadMetricsCollector()
         
@@ -875,13 +900,9 @@ class DynamicAgentSpawner:
                     resource_cost={"memory_mb": 256, "cpu_cores": 0.5}
                 ))
         
-        # Filter by resource availability (mock when ResourceManager not available)
-        if self.resource_manager:
-            available_capacity = await self.resource_manager.get_available_capacity()
-            has_capacity = available_capacity["memory_percentage"] > 0.3  # 30% available
-        else:
-            # TODO: Replace with actual resource checking
-            has_capacity = True  # Mock: assume resources available
+        # Filter by resource availability
+        available_capacity = await self.resource_manager.get_available_capacity()
+        has_capacity = available_capacity["memory_percentage"] > 0.3  # 30% available
         
         if has_capacity:
             # Sort by estimated benefit
@@ -896,10 +917,8 @@ class DynamicAgentSpawner:
         
         for recommendation in recommendations:
             try:
-                # Check if we can spawn this agent type (mock when ResourceManager not available)
-                can_allocate = True
-                if self.resource_manager:
-                    can_allocate = await self.resource_manager.can_allocate_resources(recommendation.resource_cost)
+                # Check if we can spawn this agent type
+                can_allocate = await self.resource_manager.can_allocate_resources(recommendation.resource_cost)
                 
                 if can_allocate:
                     # Create agent configuration
@@ -914,12 +933,11 @@ class DynamicAgentSpawner:
                     agent_session = await self.agent_registry.spawn_agent(config)
                     spawned_agent_ids.append(agent_session.id)
                     
-                    # Reserve resources (if ResourceManager available)
-                    if self.resource_manager:
-                        await self.resource_manager.reserve_resources(
-                            agent_session.id,
-                            recommendation.resource_cost
-                        )
+                    # Reserve resources
+                    await self.resource_manager.reserve_resources(
+                        agent_session.id,
+                        recommendation.resource_cost
+                    )
                     
                     logger.info(f"Spawned {recommendation.agent_type} agent: {agent_session.id}")
                 

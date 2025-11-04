@@ -9,6 +9,7 @@ from typing import Dict, Any
 from agentic.core.orchestrator import Orchestrator
 from agentic.models.config import AgenticConfig
 from agentic.models.task import Task, TaskResult
+from agentic.models.agent import AgentType
 
 
 class TestMajorWorkflows:
@@ -31,7 +32,15 @@ class TestMajorWorkflows:
     @pytest.fixture
     async def orchestrator(self, test_project_path):
         """Create orchestrator for testing"""
-        config = AgenticConfig()
+        config = AgenticConfig(
+            workspace_name="test_workspace",
+            workspace_path=test_project_path,
+            claude_api_key="test-key",
+            aider_config={
+                "default_model": "gemini/gemini-2.5-pro-preview-06-05",
+                "model_settings": {}
+            }
+        )
         orchestrator = Orchestrator(config)
         await orchestrator.initialize(test_project_path)
         yield orchestrator
@@ -56,7 +65,11 @@ class TestMajorWorkflows:
     @pytest.mark.integration
     async def test_orchestrator_initialization(self, test_project_path):
         """Test orchestrator initialization with project"""
-        config = AgenticConfig()
+        config = AgenticConfig(
+            workspace_name="test_workspace",
+            workspace_path=test_project_path,
+            claude_api_key="test-key"
+        )
         orchestrator = Orchestrator(config)
         
         # Initialize with project
@@ -72,15 +85,21 @@ class TestMajorWorkflows:
     @pytest.mark.integration
     async def test_agent_status_monitoring(self, orchestrator):
         """Test agent status monitoring"""
-        agent_status = orchestrator.get_agent_status()
+        # Get agent status as a dict
+        agent_status = await orchestrator.get_agent_status()
         
-        # Verify status structure
-        assert "total_agents" in agent_status
-        assert "available_agents" in agent_status
-        assert "agent_details" in agent_status
+        # This returns a dict of agent_id -> agent_info
+        assert isinstance(agent_status, dict)
         
-        # Should have some agents available
-        assert agent_status["total_agents"] >= 0
+        # Get system status for agent counts
+        system_status = orchestrator.get_system_status()
+        assert "agents" in system_status
+        assert "total_agents" in system_status["agents"]
+        assert "available_agents" in system_status["agents"]
+        
+        # Should have non-negative agent counts
+        assert system_status["agents"]["total_agents"] >= 0
+        assert system_status["agents"]["available_agents"] >= 0
 
     @pytest.mark.integration
     async def test_multiple_commands_execution(self, orchestrator):
@@ -125,11 +144,17 @@ class TestWorkflowPerformance:
     @pytest.fixture
     async def orchestrator(self):
         """Create orchestrator for performance testing"""
-        config = AgenticConfig()
-        orchestrator = Orchestrator(config)
-        await orchestrator.initialize()
-        yield orchestrator
-        await orchestrator.shutdown()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            test_path = Path(temp_dir)
+            config = AgenticConfig(
+                workspace_name="test_workspace",
+                workspace_path=test_path,
+                claude_api_key="test-key"
+            )
+            orchestrator = Orchestrator(config)
+            await orchestrator.initialize()
+            yield orchestrator
+            await orchestrator.shutdown()
 
     @pytest.mark.integration
     @pytest.mark.performance
@@ -179,11 +204,17 @@ class TestWorkflowResilience:
     @pytest.fixture
     async def orchestrator(self):
         """Create orchestrator for resilience testing"""
-        config = AgenticConfig()
-        orchestrator = Orchestrator(config)
-        await orchestrator.initialize()
-        yield orchestrator
-        await orchestrator.shutdown()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            test_path = Path(temp_dir)
+            config = AgenticConfig(
+                workspace_name="test_workspace",
+                workspace_path=test_path,
+                claude_api_key="test-key"
+            )
+            orchestrator = Orchestrator(config)
+            await orchestrator.initialize()
+            yield orchestrator
+            await orchestrator.shutdown()
 
     @pytest.mark.integration
     async def test_invalid_command_handling(self, orchestrator):
@@ -218,23 +249,29 @@ class TestWorkflowResilience:
     @pytest.mark.integration
     async def test_orchestrator_shutdown_and_restart(self):
         """Test orchestrator shutdown and restart"""
-        config = AgenticConfig()
-        
-        # First orchestrator instance
-        orchestrator1 = Orchestrator(config)
-        await orchestrator1.initialize()
-        
-        status1 = orchestrator1.get_system_status()
-        assert status1["initialized"] is True
-        
-        # Shutdown first instance
-        await orchestrator1.shutdown()
-        
-        # Create new instance
-        orchestrator2 = Orchestrator(config)
-        await orchestrator2.initialize()
-        
-        status2 = orchestrator2.get_system_status()
-        assert status2["initialized"] is True
-        
-        await orchestrator2.shutdown() 
+        with tempfile.TemporaryDirectory() as temp_dir:
+            test_path = Path(temp_dir)
+            config = AgenticConfig(
+                workspace_name="test_workspace",
+                workspace_path=test_path,
+                claude_api_key="test-key"
+            )
+            
+            # First orchestrator instance
+            orchestrator1 = Orchestrator(config)
+            await orchestrator1.initialize()
+            
+            status1 = orchestrator1.get_system_status()
+            assert status1["initialized"] is True
+            
+            # Shutdown first instance
+            await orchestrator1.shutdown()
+            
+            # Create new instance
+            orchestrator2 = Orchestrator(config)
+            await orchestrator2.initialize()
+            
+            status2 = orchestrator2.get_system_status()
+            assert status2["initialized"] is True
+            
+            await orchestrator2.shutdown() 

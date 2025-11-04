@@ -9,17 +9,47 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import AsyncGenerator, Dict, List, Optional
+from typing import AsyncGenerator, Dict, List, Optional, Any
 
 from pydantic import BaseModel, Field, ConfigDict
 
 from agentic.models.task import Task, TaskResult
 
 
+class DiscoveryType(str, Enum):
+    """Types of discoveries agents can report"""
+    API_READY = "api_ready"  # API endpoint is ready/discovered
+    TEST_NEEDED = "test_needed"  # Test coverage needed for code
+    BUG_FOUND = "bug_found"  # Bug detected in code
+    SECURITY_ISSUE = "security_issue"  # Security vulnerability found
+    PERFORMANCE_ISSUE = "performance_issue"  # Performance bottleneck detected
+    REFACTOR_OPPORTUNITY = "refactor_opportunity"  # Code can be improved
+    DEPENDENCY_UPDATE = "dependency_update"  # Dependency needs update
+    DOCUMENTATION_NEEDED = "documentation_needed"  # Documentation missing/outdated
+    CONFIG_ISSUE = "config_issue"  # Configuration problem detected
+    INTEGRATION_POINT = "integration_point"  # Integration opportunity found
+    RESEARCH_FINDING = "research_finding"  # Hypothesis or experiment result identified
+
+
+class Discovery(BaseModel):
+    """A discovery made by an agent during execution"""
+    type: DiscoveryType = Field(description="Type of discovery")
+    description: str = Field(description="Description of the discovery")
+    context: Dict[str, Any] = Field(default_factory=dict, description="Additional context")
+    severity: str = Field(default="info", description="Severity: info, warning, error, critical")
+    agent_name: str = Field(description="Name of the agent that made the discovery")
+    timestamp: datetime = Field(default_factory=datetime.utcnow, description="When the discovery was made")
+    file_path: Optional[str] = Field(default=None, description="File path if discovery is file-specific")
+    line_number: Optional[int] = Field(default=None, description="Line number if applicable")
+    suggested_action: Optional[str] = Field(default=None, description="Suggested action to take")
+
+
 class AgentType(str, Enum):
     """Types of available agents"""
     # Analysis and reasoning
     CLAUDE_CODE = "claude_code"
+    GEMINI = "gemini"
+    CODEX_RESEARCH = "codex_research"
     
     # Domain-based agents (current implementation)
     AIDER_BACKEND = "aider_backend"
@@ -121,31 +151,28 @@ class Agent(ABC):
         self.session: Optional[AgentSession] = None
         self._monitor = None
         self._monitor_agent_id = None
+        self._discoveries: List[Discovery] = []  # Store discoveries during execution
+        self._discovery_callback = None  # Callback for reporting discoveries
     
     @abstractmethod
     async def start(self) -> bool:
         """Start the agent session"""
-        pass
     
     @abstractmethod
     async def stop(self) -> bool:
         """Stop the agent session"""
-        pass
     
     @abstractmethod
     async def execute_task(self, task: Task) -> TaskResult:
         """Execute a specific task"""
-        pass
     
     @abstractmethod
     async def health_check(self) -> bool:
         """Check if agent is healthy and responsive"""
-        pass
     
     @abstractmethod
     def get_capabilities(self) -> AgentCapability:
         """Return agent capabilities"""
-        pass
     
     async def stream_progress(self, task: Task) -> AsyncGenerator[str, None]:
         """Stream progress updates during task execution"""
@@ -163,11 +190,49 @@ class Agent(ABC):
         """Report status to monitor if available"""
         if self._monitor and self._monitor_agent_id:
             try:
-                from agentic.core.swarm_monitor import AgentStatus
+                from agentic.core.swarm_monitor_unified import AgentStatus
                 status_enum = AgentStatus(status)
                 self._monitor.update_agent_status(self._monitor_agent_id, status_enum, message)
             except Exception:
                 pass  # Don't let monitoring errors affect execution
+    
+    def report_discovery(self, discovery_type: DiscoveryType, description: str, 
+                        context: Optional[Dict[str, Any]] = None, severity: str = "info",
+                        file_path: Optional[str] = None, line_number: Optional[int] = None,
+                        suggested_action: Optional[str] = None) -> None:
+        """Report a discovery made during task execution"""
+        discovery = Discovery(
+            type=discovery_type,
+            description=description,
+            context=context or {},
+            severity=severity,
+            agent_name=self.name,
+            file_path=file_path,
+            line_number=line_number,
+            suggested_action=suggested_action
+        )
+        
+        # Store locally
+        self._discoveries.append(discovery)
+        
+        # Report via callback if available
+        if self._discovery_callback:
+            try:
+                self._discovery_callback(discovery)
+            except Exception:
+                pass  # Don't let callback errors affect execution
+    
+    def set_discovery_callback(self, callback) -> None:
+        """Set callback for reporting discoveries in real-time"""
+        self._discovery_callback = callback
+    
+    def get_discoveries(self) -> List[Discovery]:
+        """Get all discoveries made by this agent"""
+        return self._discoveries.copy()
+    
+    def clear_discoveries(self) -> None:
+        """Clear stored discoveries"""
+        self._discoveries.clear()
     
     def can_handle_task(self, task: Task) -> bool:
         """Check if this agent can handle the given task"""

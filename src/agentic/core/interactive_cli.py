@@ -6,7 +6,6 @@ Rich interactive CLI with real-time updates, progress tracking, and split-screen
 import asyncio
 import uuid
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 
@@ -18,8 +17,6 @@ from rich.table import Table
 from rich.live import Live
 from rich.text import Text
 from rich.align import Align
-from rich.columns import Columns
-from rich.tree import Tree
 from rich.syntax import Syntax
 import click
 

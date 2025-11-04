@@ -4,9 +4,8 @@ ML-Enhanced Intent Classifier for Phase 3 with learning capabilities
 
 from __future__ import annotations
 
-import json
 import re
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from agentic.core.intent_classifier import IntentClassifier
 from agentic.core.shared_memory_enhanced import SharedMemorySystem

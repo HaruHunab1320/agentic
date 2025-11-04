@@ -7,18 +7,15 @@ import asyncio
 import json
 import uuid
 import psutil
-import time
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
-from pathlib import Path
 from dataclasses import dataclass, field
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from .configuration import PerformanceConfig
 
@@ -208,7 +205,6 @@ class CostTracker:
     async def start(self):
         """Start cost tracking"""
         # Cost tracking is event-driven, no background task needed
-        pass
     
     async def track_api_call(self, model: str, input_tokens: int, 
                            output_tokens: int, thinking_tokens: int = 0,

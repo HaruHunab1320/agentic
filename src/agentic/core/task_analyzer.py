@@ -5,7 +5,6 @@ Enhanced Task Analyzer for Intelligent Agent Selection
 import re
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
-from pathlib import Path
 
 from agentic.utils.logging import LoggerMixin
 
@@ -65,6 +64,20 @@ class TaskAnalyzer(LoggerMixin):
                 (r'apply\s+.*\s+pattern', 'pattern_application'),
                 (r'scaffold\s+', 'scaffolding_task'),
                 (r'boilerplate\s+', 'boilerplate_creation'),
+            ],
+            
+            # Gemini-optimal patterns
+            'gemini_preferred': [
+                (r'(?:analyze|process|extract).*(?:image|pdf|sketch|diagram|screenshot)', 'multimodal_analysis'),
+                (r'(?:from|using).*(?:image|pdf|visual|diagram)', 'multimodal_input'),
+                (r'research\s+(?:about|on|for)', 'research_task'),
+                (r'(?:find|search|lookup).*(?:latest|current|recent)', 'current_info_needed'),
+                (r'google\s+(?:search|for)', 'web_search_needed'),
+                (r'(?:compare|analyze).*(?:across|between|multiple)', 'comparison_analysis'),
+                (r'generate.*from.*(?:pdf|image|sketch)', 'multimodal_generation'),
+                (r'document\s+(?:analysis|processing)', 'document_processing'),
+                (r'visual\s+', 'visual_task'),
+                (r'diagram\s+', 'diagram_task'),
             ],
             
             # Hybrid patterns (benefit from both)
@@ -272,46 +285,67 @@ class TaskAnalyzer(LoggerMixin):
         """Suggest the optimal agent based on analysis"""
         reasoning = []
         
-        # Check for explicit pattern matches
+        # Check for explicit pattern matches - hierarchical order
+        
+        # 1. Check if this needs chief architect (Gemini)
+        for pattern, indicator in self.command_patterns['gemini_preferred']:
+            if re.search(pattern, command):
+                reasoning.append(f"Chief Architect (Gemini) pattern match: {indicator}")
+                return 'chief-architect', reasoning
+        
+        # 2. Check if this is domain-specific architecture (Claude)
         for pattern, indicator in self.command_patterns['claude_preferred']:
             if re.search(pattern, command):
-                reasoning.append(f"Claude pattern match: {indicator}")
-                return 'claude_code', reasoning
+                reasoning.append(f"Domain Architect (Claude) pattern match: {indicator}")
+                domain = self._determine_domain(command)
+                return f'{domain}-architect', reasoning
         
+        # 3. Check if this is implementation work (Aider)
         for pattern, indicator in self.command_patterns['aider_preferred']:
             if re.search(pattern, command):
-                reasoning.append(f"Aider pattern match: {indicator}")
+                reasoning.append(f"Implementation (Aider) pattern match: {indicator}")
                 return self._select_aider_variant(command), reasoning
         
-        # Heuristic-based selection
-        if ambiguity > 0.7:
-            reasoning.append(f"High ambiguity ({ambiguity:.2f}) - Claude better at understanding unclear requests")
-            return 'claude_code', reasoning
+        # Heuristic-based selection with hierarchy
         
+        # High-level decisions go to chief architect
+        if self._needs_system_level_decision(command, file_count):
+            reasoning.append("System-wide impact detected - needs Chief Architect")
+            return 'chief-architect', reasoning
+        
+        # Ambiguous requests need clarification from higher level
+        if ambiguity > 0.7:
+            reasoning.append(f"High ambiguity ({ambiguity:.2f}) - needs architectural clarification")
+            if file_count > 5:
+                reasoning.append("Large scope - Chief Architect needed")
+                return 'chief-architect', reasoning
+            else:
+                domain = self._determine_domain(command)
+                return f'{domain}-architect', reasoning
+        
+        # Complex domain-specific tasks
         if complexity > 0.7 and creativity:
             reasoning.append(f"High complexity ({complexity:.2f}) with creativity needed")
-            return 'claude_code', reasoning
+            domain = self._determine_domain(command)
+            return f'{domain}-architect', reasoning
         
+        # Implementation tasks
         if file_count > 3 or bulk_op:
-            reasoning.append(f"Multi-file operation ({file_count} files) - Aider more efficient")
+            reasoning.append(f"Multi-file operation ({file_count} files) - Implementation task")
             return self._select_aider_variant(command), reasoning
         
         if pattern_following and not creativity:
-            reasoning.append("Following existing patterns - Aider efficient at pattern replication")
+            reasoning.append("Following existing patterns - Implementation task")
             return self._select_aider_variant(command), reasoning
-        
-        # Hybrid approach for medium complexity
-        if file_count >= 2 and complexity > 0.5:
-            reasoning.append("Medium complexity multi-file task - consider hybrid approach")
-            return 'hybrid', reasoning
         
         # Default based on operation type
         op_type = self._determine_operation_type(command)
         if op_type in ['analyze', 'debug', 'optimize']:
-            reasoning.append(f"Operation type '{op_type}' - Claude excels at reasoning tasks")
-            return 'claude_code', reasoning
+            reasoning.append(f"Operation type '{op_type}' - Domain architecture task")
+            domain = self._determine_domain(command)
+            return f'{domain}-architect', reasoning
         else:
-            reasoning.append(f"Operation type '{op_type}' - standard implementation task")
+            reasoning.append(f"Operation type '{op_type}' - Implementation task")
             return self._select_aider_variant(command), reasoning
     
     def _select_aider_variant(self, command: str) -> str:
@@ -322,3 +356,54 @@ class TaskAnalyzer(LoggerMixin):
             return 'aider_testing'
         else:
             return 'aider_backend'
+    
+    def _determine_domain(self, command: str) -> str:
+        """Determine which domain a task belongs to"""
+        command_lower = command.lower()
+        
+        frontend_keywords = ['frontend', 'ui', 'react', 'vue', 'angular', 'component', 
+                           'css', 'style', 'layout', 'responsive', 'user interface']
+        backend_keywords = ['backend', 'api', 'database', 'server', 'endpoint', 
+                          'service', 'auth', 'data', 'model', 'migration']
+        devops_keywords = ['deploy', 'docker', 'kubernetes', 'ci/cd', 'pipeline', 
+                         'infrastructure', 'monitoring', 'logging', 'aws', 'cloud']
+        
+        # Count keyword matches
+        frontend_score = sum(1 for kw in frontend_keywords if kw in command_lower)
+        backend_score = sum(1 for kw in backend_keywords if kw in command_lower)
+        devops_score = sum(1 for kw in devops_keywords if kw in command_lower)
+        
+        # Return domain with highest score
+        if frontend_score > backend_score and frontend_score > devops_score:
+            return 'frontend'
+        elif devops_score > backend_score:
+            return 'devops'
+        else:
+            return 'backend'  # Default to backend
+    
+    def _needs_system_level_decision(self, command: str, file_count: int) -> bool:
+        """Determine if a task requires system-level architectural decisions"""
+        system_keywords = [
+            'entire system', 'whole application', 'all services', 'architecture',
+            'microservices', 'monolith', 'refactor everything', 'redesign',
+            'technology stack', 'framework migration', 'database migration',
+            'scaling strategy', 'security architecture', 'cross-cutting'
+        ]
+        
+        # Check for system-level keywords
+        command_lower = command.lower()
+        has_system_keyword = any(kw in command_lower for kw in system_keywords)
+        
+        # Large file count often indicates system-wide changes
+        large_scope = file_count > 10
+        
+        # Multiple domain keywords suggest cross-domain work
+        domains_mentioned = sum([
+            'frontend' in command_lower,
+            'backend' in command_lower,
+            'database' in command_lower,
+            'infrastructure' in command_lower
+        ])
+        cross_domain = domains_mentioned >= 2
+        
+        return has_system_keyword or large_scope or cross_domain

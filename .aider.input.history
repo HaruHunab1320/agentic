@@ -1,0 +1,2816 @@
+
+# 2025-06-08 09:32:19.843843
++You are a aider_testing agent specializing in: testing, qa, test_automation.
++
++Task: create a simple test.py file that prints hello world
++
++Context: Focus on testing and quality assurance including:
++- Unit testing and test-driven development
++- Integration and end-to-end testing
++- Test automation and CI/CD
++- Code coverage and quality metrics
++- Performance and load testing
++- Bug reproduction and regression testing
++
++Prioritize working with these file patterns:
++- test_*.py, *_test.py, *.test.js, *.spec.*
++- **/tests/**, **/test/**, **/__tests__/**
++- pytest.ini, jest.config.*, karma.conf.*
++- Coverage configuration and test utilities
+
+# 2025-06-08 09:32:19.843914
++You are a aider_testing agent specializing in: testing, qa, test_automation.
++
++Task: create a simple test.py file that prints hello world
++
++Context: Focus on testing and quality assurance including:
++- Unit testing and test-driven development
++- Integration and end-to-end testing
++- Test automation and CI/CD
++- Code coverage and quality metrics
++- Performance and load testing
++- Bug reproduction and regression testing
++
++Prioritize working with these file patterns:
++- test_*.py, *_test.py, *.test.js, *.spec.*
++- **/tests/**, **/test/**, **/__tests__/**
++- pytest.ini, jest.config.*, karma.conf.*
++- Coverage configuration and test utilities
+
+# 2025-06-08 09:33:21.288799
++You are a aider_backend agent specializing in: backend, api, database, architecture.
++
++Task: Create a Python module called calculator.py with the following functions:
++    - add(a, b): returns sum of a and b
++    - subtract(a, b): returns a minus b
++    - multiply(a, b): returns product of a and b
++    - divide(a, b): returns a divided by b with error handling for division by zero
++    Include docstrings and type hints for all functions.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-08 09:33:21.288974
++You are a aider_backend agent specializing in: backend, api, database, architecture.
++
++Task: Create a Python module called calculator.py with the following functions:
++    - add(a, b): returns sum of a and b
++    - subtract(a, b): returns a minus b
++    - multiply(a, b): returns product of a and b
++    - divide(a, b): returns a divided by b with error handling for division by zero
++    Include docstrings and type hints for all functions.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-08 09:34:52.014710
++You are a aider_backend agent specializing in: backend, api, database, architecture.
++
++Task: Write a Python function that checks if a string is a palindrome. 
++    Include comprehensive tests and edge cases.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-08 09:34:52.014954
++You are a aider_backend agent specializing in: backend, api, database, architecture.
++
++Task: Write a Python function that checks if a string is a palindrome. 
++    Include comprehensive tests and edge cases.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-08 09:36:09.440142
++You are a aider_backend agent specializing in: backend, api, database, architecture.
++
++Task: Write a Python function that checks if a string is a palindrome. 
++    Include comprehensive tests and edge cases.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-08 09:36:09.440217
++You are a aider_backend agent specializing in: backend, api, database, architecture.
++
++Task: Write a Python function that checks if a string is a palindrome. 
++    Include comprehensive tests and edge cases.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-08 14:56:05.578102
++You are a aider_backend agent specializing in: backend, api, database, architecture.
++
++Task: create a hello.txt file with 'Hello World' content
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-08 14:56:05.579165
++You are a aider_backend agent specializing in: backend, api, database, architecture.
++
++Task: create a hello.txt file with 'Hello World' content
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-08 15:02:30.279152
++You are a aider_backend agent specializing in: backend, api, database, architecture.
++
++Task: create a hello.txt file with 'Hello World' content
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-08 15:02:30.279855
++You are a aider_backend agent specializing in: backend, api, database, architecture.
++
++Task: create a hello.txt file with 'Hello World' content
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-09 09:46:28.868437
++You are a aider_backend agent specializing in: backend, api, database, architecture.
++
++Task: Write a Python function that checks if a string is a palindrome. 
++    Include comprehensive tests and edge cases.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-09 09:46:28.868707
++You are a aider_backend agent specializing in: backend, api, database, architecture.
++
++Task: Write a Python function that checks if a string is a palindrome. 
++    Include comprehensive tests and edge cases.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-09 09:50:29.001502
++You are a aider_backend agent specializing in: backend, api, database, architecture.
++
++Task: Write a Python function that checks if a string is a palindrome. 
++    Include comprehensive tests and edge cases.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-09 09:50:29.001570
++You are a aider_backend agent specializing in: backend, api, database, architecture.
++
++Task: Write a Python function that checks if a string is a palindrome. 
++    Include comprehensive tests and edge cases.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-17 21:54:47.320774
++You are a aider_testing agent specializing in: testing, qa, automation.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++You have been given read-only access to key project files. 
++Please examine the codebase structure, understand the architecture, and provide a comprehensive analysis.
++Focus on identifying the project's current state, technologies used, and any remaining work needed.
++
++Task: Create comprehensive tests for: Build a complete full-stack real-time collaborative code editor application with the following features:
++
++1. Frontend (React + TypeScript):
++   - Monaco editor integration
++   - Real-time cursor positions of other users
++   - Live character-by-character updates
++   - User presence indicators (who's online)
++   - File explorer sidebar
++   - Syntax highlighting for multiple languages
++   - Dark/light theme toggle
++
++2. Backend (Node.js + Express):
++   - WebSocket server for real-time communication
++   - Operational Transform algorithm for conflict resolution
++   - REST API for file operations
++   - Session management
++   - Rate limiting per user
++
++3. Database (PostgreSQL):
++   - Store documents with version history
++   - User accounts and permissions
++   - Active sessions tracking
++   - Optimized for real-time queries
++
++4. Infrastructure:
++   - Redis for pub/sub and caching
++   - Docker compose for local development
++   - Environment-based configuration
++
++5. Testing:
++   - Unit tests for OT algorithm
++   - Integration tests for WebSocket events
++   - E2E tests for collaborative editing
++
++6. Security:
++   - JWT authentication
++   - Per-document permissions
++   - Rate limiting on edits
++   - XSS prevention
++
++Make it production-ready with proper error handling, logging, and monitoring hooks.. Implement unit tests, integration tests, and end-to-end testing. Test all components and their interactions.
++
++Context: Focus on testing and quality assurance including:
++- Unit testing and test-driven development
++- Integration and end-to-end testing
++- Test automation and CI/CD
++- Code coverage and quality metrics
++- Performance and load testing
++- Bug reproduction and regression testing
++
++Prioritize working with these file patterns:
++- test_*.py, *_test.py, *.test.js, *.spec.*
++- **/tests/**, **/test/**, **/__tests__/**
++- pytest.ini, jest.config.*, karma.conf.*
++- Coverage configuration and test utilities
+
+# 2025-06-17 21:54:47.322068
++You are a aider_testing agent specializing in: testing, qa, automation.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++You have been given read-only access to key project files. 
++Please examine the codebase structure, understand the architecture, and provide a comprehensive analysis.
++Focus on identifying the project's current state, technologies used, and any remaining work needed.
++
++Task: Create comprehensive tests for: Build a complete full-stack real-time collaborative code editor application with the following features:
++
++1. Frontend (React + TypeScript):
++   - Monaco editor integration
++   - Real-time cursor positions of other users
++   - Live character-by-character updates
++   - User presence indicators (who's online)
++   - File explorer sidebar
++   - Syntax highlighting for multiple languages
++   - Dark/light theme toggle
++
++2. Backend (Node.js + Express):
++   - WebSocket server for real-time communication
++   - Operational Transform algorithm for conflict resolution
++   - REST API for file operations
++   - Session management
++   - Rate limiting per user
++
++3. Database (PostgreSQL):
++   - Store documents with version history
++   - User accounts and permissions
++   - Active sessions tracking
++   - Optimized for real-time queries
++
++4. Infrastructure:
++   - Redis for pub/sub and caching
++   - Docker compose for local development
++   - Environment-based configuration
++
++5. Testing:
++   - Unit tests for OT algorithm
++   - Integration tests for WebSocket events
++   - E2E tests for collaborative editing
++
++6. Security:
++   - JWT authentication
++   - Per-document permissions
++   - Rate limiting on edits
++   - XSS prevention
++
++Make it production-ready with proper error handling, logging, and monitoring hooks.. Implement unit tests, integration tests, and end-to-end testing. Test all components and their interactions.
++
++Context: Focus on testing and quality assurance including:
++- Unit testing and test-driven development
++- Integration and end-to-end testing
++- Test automation and CI/CD
++- Code coverage and quality metrics
++- Performance and load testing
++- Bug reproduction and regression testing
++
++Prioritize working with these file patterns:
++- test_*.py, *_test.py, *.test.js, *.spec.*
++- **/tests/**, **/test/**, **/__tests__/**
++- pytest.ini, jest.config.*, karma.conf.*
++- Coverage configuration and test utilities
+
+# 2025-06-17 21:54:47.754693
++You are a aider_backend agent specializing in: devops, deployment, infrastructure.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++You have been given read-only access to key project files. 
++Please examine the codebase structure, understand the architecture, and provide a comprehensive analysis.
++Focus on identifying the project's current state, technologies used, and any remaining work needed.
++
++Task: Create deployment configuration for: Build a complete full-stack real-time collaborative code editor application with the following features:
++
++1. Frontend (React + TypeScript):
++   - Monaco editor integration
++   - Real-time cursor positions of other users
++   - Live character-by-character updates
++   - User presence indicators (who's online)
++   - File explorer sidebar
++   - Syntax highlighting for multiple languages
++   - Dark/light theme toggle
++
++2. Backend (Node.js + Express):
++   - WebSocket server for real-time communication
++   - Operational Transform algorithm for conflict resolution
++   - REST API for file operations
++   - Session management
++   - Rate limiting per user
++
++3. Database (PostgreSQL):
++   - Store documents with version history
++   - User accounts and permissions
++   - Active sessions tracking
++   - Optimized for real-time queries
++
++4. Infrastructure:
++   - Redis for pub/sub and caching
++   - Docker compose for local development
++   - Environment-based configuration
++
++5. Testing:
++   - Unit tests for OT algorithm
++   - Integration tests for WebSocket events
++   - E2E tests for collaborative editing
++
++6. Security:
++   - JWT authentication
++   - Per-document permissions
++   - Rate limiting on edits
++   - XSS prevention
++
++Make it production-ready with proper error handling, logging, and monitoring hooks.. Set up Docker, CI/CD, and production deployment scripts.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-17 21:54:47.755043
++You are a aider_backend agent specializing in: devops, deployment, infrastructure.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++You have been given read-only access to key project files. 
++Please examine the codebase structure, understand the architecture, and provide a comprehensive analysis.
++Focus on identifying the project's current state, technologies used, and any remaining work needed.
++
++Task: Create deployment configuration for: Build a complete full-stack real-time collaborative code editor application with the following features:
++
++1. Frontend (React + TypeScript):
++   - Monaco editor integration
++   - Real-time cursor positions of other users
++   - Live character-by-character updates
++   - User presence indicators (who's online)
++   - File explorer sidebar
++   - Syntax highlighting for multiple languages
++   - Dark/light theme toggle
++
++2. Backend (Node.js + Express):
++   - WebSocket server for real-time communication
++   - Operational Transform algorithm for conflict resolution
++   - REST API for file operations
++   - Session management
++   - Rate limiting per user
++
++3. Database (PostgreSQL):
++   - Store documents with version history
++   - User accounts and permissions
++   - Active sessions tracking
++   - Optimized for real-time queries
++
++4. Infrastructure:
++   - Redis for pub/sub and caching
++   - Docker compose for local development
++   - Environment-based configuration
++
++5. Testing:
++   - Unit tests for OT algorithm
++   - Integration tests for WebSocket events
++   - E2E tests for collaborative editing
++
++6. Security:
++   - JWT authentication
++   - Per-document permissions
++   - Rate limiting on edits
++   - XSS prevention
++
++Make it production-ready with proper error handling, logging, and monitoring hooks.. Set up Docker, CI/CD, and production deployment scripts.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-17 21:54:48.207445
++You are a aider_backend agent specializing in: backend, api, database, authentication.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++You have been given read-only access to key project files. 
++Please examine the codebase structure, understand the architecture, and provide a comprehensive analysis.
++Focus on identifying the project's current state, technologies used, and any remaining work needed.
++
++Task: Create complete backend/API code for: Build a complete full-stack real-time collaborative code editor application with the following features:
++
++1. Frontend (React + TypeScript):
++   - Monaco editor integration
++   - Real-time cursor positions of other users
++   - Live character-by-character updates
++   - User presence indicators (who's online)
++   - File explorer sidebar
++   - Syntax highlighting for multiple languages
++   - Dark/light theme toggle
++
++2. Backend (Node.js + Express):
++   - WebSocket server for real-time communication
++   - Operational Transform algorithm for conflict resolution
++   - REST API for file operations
++   - Session management
++   - Rate limiting per user
++
++3. Database (PostgreSQL):
++   - Store documents with version history
++   - User accounts and permissions
++   - Active sessions tracking
++   - Optimized for real-time queries
++
++4. Infrastructure:
++   - Redis for pub/sub and caching
++   - Docker compose for local development
++   - Environment-based configuration
++
++5. Testing:
++   - Unit tests for OT algorithm
++   - Integration tests for WebSocket events
++   - E2E tests for collaborative editing
++
++6. Security:
++   - JWT authentication
++   - Per-document permissions
++   - Rate limiting on edits
++   - XSS prevention
++
++Make it production-ready with proper error handling, logging, and monitoring hooks.. Use the language/framework specified in the request (e.g., TypeScript/Node.js, Python/FastAPI, etc.). Create working, runnable backend code with proper file structure.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-17 21:54:48.207571
++You are a aider_backend agent specializing in: backend, api, database, authentication.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++You have been given read-only access to key project files. 
++Please examine the codebase structure, understand the architecture, and provide a comprehensive analysis.
++Focus on identifying the project's current state, technologies used, and any remaining work needed.
++
++Task: Create complete backend/API code for: Build a complete full-stack real-time collaborative code editor application with the following features:
++
++1. Frontend (React + TypeScript):
++   - Monaco editor integration
++   - Real-time cursor positions of other users
++   - Live character-by-character updates
++   - User presence indicators (who's online)
++   - File explorer sidebar
++   - Syntax highlighting for multiple languages
++   - Dark/light theme toggle
++
++2. Backend (Node.js + Express):
++   - WebSocket server for real-time communication
++   - Operational Transform algorithm for conflict resolution
++   - REST API for file operations
++   - Session management
++   - Rate limiting per user
++
++3. Database (PostgreSQL):
++   - Store documents with version history
++   - User accounts and permissions
++   - Active sessions tracking
++   - Optimized for real-time queries
++
++4. Infrastructure:
++   - Redis for pub/sub and caching
++   - Docker compose for local development
++   - Environment-based configuration
++
++5. Testing:
++   - Unit tests for OT algorithm
++   - Integration tests for WebSocket events
++   - E2E tests for collaborative editing
++
++6. Security:
++   - JWT authentication
++   - Per-document permissions
++   - Rate limiting on edits
++   - XSS prevention
++
++Make it production-ready with proper error handling, logging, and monitoring hooks.. Use the language/framework specified in the request (e.g., TypeScript/Node.js, Python/FastAPI, etc.). Create working, runnable backend code with proper file structure.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-17 21:54:48.678617
++You are a aider_frontend agent specializing in: frontend, ui, components, styling.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++You have been given read-only access to key project files. 
++Please examine the codebase structure, understand the architecture, and provide a comprehensive analysis.
++Focus on identifying the project's current state, technologies used, and any remaining work needed.
++
++Task: Create complete frontend/UI code for: Build a complete full-stack real-time collaborative code editor application with the following features:
++
++1. Frontend (React + TypeScript):
++   - Monaco editor integration
++   - Real-time cursor positions of other users
++   - Live character-by-character updates
++   - User presence indicators (who's online)
++   - File explorer sidebar
++   - Syntax highlighting for multiple languages
++   - Dark/light theme toggle
++
++2. Backend (Node.js + Express):
++   - WebSocket server for real-time communication
++   - Operational Transform algorithm for conflict resolution
++   - REST API for file operations
++   - Session management
++   - Rate limiting per user
++
++3. Database (PostgreSQL):
++   - Store documents with version history
++   - User accounts and permissions
++   - Active sessions tracking
++   - Optimized for real-time queries
++
++4. Infrastructure:
++   - Redis for pub/sub and caching
++   - Docker compose for local development
++   - Environment-based configuration
++
++5. Testing:
++   - Unit tests for OT algorithm
++   - Integration tests for WebSocket events
++   - E2E tests for collaborative editing
++
++6. Security:
++   - JWT authentication
++   - Per-document permissions
++   - Rate limiting on edits
++   - XSS prevention
++
++Make it production-ready with proper error handling, logging, and monitoring hooks.. Write actual React components, pages, styling, and API integration code. Create working, runnable frontend code with proper component structure.
++
++Context: Focus on frontend development including:
++- UI/UX design and implementation
++- Component architecture and reusability  
++- Modern frontend frameworks (React, Vue, Angular)
++- CSS/styling and responsive design
++- Frontend build tools and optimization
++- Accessibility and performance
++
++Prioritize working with these file patterns:
++- *.js, *.jsx, *.ts, *.tsx, *.vue, *.svelte
++- *.css, *.scss, *.less, *.styled.*
++- **/components/**, **/pages/**, **/views/**
++- package.json, webpack.config.js, vite.config.*
+
+# 2025-06-17 21:54:48.678963
++You are a aider_frontend agent specializing in: frontend, ui, components, styling.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++You have been given read-only access to key project files. 
++Please examine the codebase structure, understand the architecture, and provide a comprehensive analysis.
++Focus on identifying the project's current state, technologies used, and any remaining work needed.
++
++Task: Create complete frontend/UI code for: Build a complete full-stack real-time collaborative code editor application with the following features:
++
++1. Frontend (React + TypeScript):
++   - Monaco editor integration
++   - Real-time cursor positions of other users
++   - Live character-by-character updates
++   - User presence indicators (who's online)
++   - File explorer sidebar
++   - Syntax highlighting for multiple languages
++   - Dark/light theme toggle
++
++2. Backend (Node.js + Express):
++   - WebSocket server for real-time communication
++   - Operational Transform algorithm for conflict resolution
++   - REST API for file operations
++   - Session management
++   - Rate limiting per user
++
++3. Database (PostgreSQL):
++   - Store documents with version history
++   - User accounts and permissions
++   - Active sessions tracking
++   - Optimized for real-time queries
++
++4. Infrastructure:
++   - Redis for pub/sub and caching
++   - Docker compose for local development
++   - Environment-based configuration
++
++5. Testing:
++   - Unit tests for OT algorithm
++   - Integration tests for WebSocket events
++   - E2E tests for collaborative editing
++
++6. Security:
++   - JWT authentication
++   - Per-document permissions
++   - Rate limiting on edits
++   - XSS prevention
++
++Make it production-ready with proper error handling, logging, and monitoring hooks.. Write actual React components, pages, styling, and API integration code. Create working, runnable frontend code with proper component structure.
++
++Context: Focus on frontend development including:
++- UI/UX design and implementation
++- Component architecture and reusability  
++- Modern frontend frameworks (React, Vue, Angular)
++- CSS/styling and responsive design
++- Frontend build tools and optimization
++- Accessibility and performance
++
++Prioritize working with these file patterns:
++- *.js, *.jsx, *.ts, *.tsx, *.vue, *.svelte
++- *.css, *.scss, *.less, *.styled.*
++- **/components/**, **/pages/**, **/views/**
++- package.json, webpack.config.js, vite.config.*
+
+# 2025-06-17 21:55:55.639278
++You are a aider_testing agent specializing in: testing, qa, automation.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++You have been given read-only access to key project files. 
++Please examine the codebase structure, understand the architecture, and provide a comprehensive analysis.
++Focus on identifying the project's current state, technologies used, and any remaining work needed.
++
++Task: Create comprehensive tests for: Build a complete full-stack real-time collaborative code editor application with the following features:
++
++1. Frontend (React + TypeScript):
++   - Monaco editor integration
++   - Real-time cursor positions of other users
++   - Live character-by-character updates
++   - User presence indicators (who's online)
++   - File explorer sidebar
++   - Syntax highlighting for multiple languages
++   - Dark/light theme toggle
++
++2. Backend (Node.js + Express):
++   - WebSocket server for real-time communication
++   - Operational Transform algorithm for conflict resolution
++   - REST API for file operations
++   - Session management
++   - Rate limiting per user
++
++3. Database (PostgreSQL):
++   - Store documents with version history
++   - User accounts and permissions
++   - Active sessions tracking
++   - Optimized for real-time queries
++
++4. Infrastructure:
++   - Redis for pub/sub and caching
++   - Docker compose for local development
++   - Environment-based configuration
++
++5. Testing:
++   - Unit tests for OT algorithm
++   - Integration tests for WebSocket events
++   - E2E tests for collaborative editing
++
++6. Security:
++   - JWT authentication
++   - Per-document permissions
++   - Rate limiting on edits
++   - XSS prevention
++
++Make it production-ready with proper error handling, logging, and monitoring hooks.. Implement unit tests, integration tests, and end-to-end testing. Test all components and their interactions.
++
++Context: Focus on testing and quality assurance including:
++- Unit testing and test-driven development
++- Integration and end-to-end testing
++- Test automation and CI/CD
++- Code coverage and quality metrics
++- Performance and load testing
++- Bug reproduction and regression testing
++
++Prioritize working with these file patterns:
++- test_*.py, *_test.py, *.test.js, *.spec.*
++- **/tests/**, **/test/**, **/__tests__/**
++- pytest.ini, jest.config.*, karma.conf.*
++- Coverage configuration and test utilities
+
+# 2025-06-17 21:55:55.639662
++You are a aider_testing agent specializing in: testing, qa, automation.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++You have been given read-only access to key project files. 
++Please examine the codebase structure, understand the architecture, and provide a comprehensive analysis.
++Focus on identifying the project's current state, technologies used, and any remaining work needed.
++
++Task: Create comprehensive tests for: Build a complete full-stack real-time collaborative code editor application with the following features:
++
++1. Frontend (React + TypeScript):
++   - Monaco editor integration
++   - Real-time cursor positions of other users
++   - Live character-by-character updates
++   - User presence indicators (who's online)
++   - File explorer sidebar
++   - Syntax highlighting for multiple languages
++   - Dark/light theme toggle
++
++2. Backend (Node.js + Express):
++   - WebSocket server for real-time communication
++   - Operational Transform algorithm for conflict resolution
++   - REST API for file operations
++   - Session management
++   - Rate limiting per user
++
++3. Database (PostgreSQL):
++   - Store documents with version history
++   - User accounts and permissions
++   - Active sessions tracking
++   - Optimized for real-time queries
++
++4. Infrastructure:
++   - Redis for pub/sub and caching
++   - Docker compose for local development
++   - Environment-based configuration
++
++5. Testing:
++   - Unit tests for OT algorithm
++   - Integration tests for WebSocket events
++   - E2E tests for collaborative editing
++
++6. Security:
++   - JWT authentication
++   - Per-document permissions
++   - Rate limiting on edits
++   - XSS prevention
++
++Make it production-ready with proper error handling, logging, and monitoring hooks.. Implement unit tests, integration tests, and end-to-end testing. Test all components and their interactions.
++
++Context: Focus on testing and quality assurance including:
++- Unit testing and test-driven development
++- Integration and end-to-end testing
++- Test automation and CI/CD
++- Code coverage and quality metrics
++- Performance and load testing
++- Bug reproduction and regression testing
++
++Prioritize working with these file patterns:
++- test_*.py, *_test.py, *.test.js, *.spec.*
++- **/tests/**, **/test/**, **/__tests__/**
++- pytest.ini, jest.config.*, karma.conf.*
++- Coverage configuration and test utilities
+
+# 2025-06-17 21:55:56.055861
++You are a aider_backend agent specializing in: backend, api, database, authentication.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++You have been given read-only access to key project files. 
++Please examine the codebase structure, understand the architecture, and provide a comprehensive analysis.
++Focus on identifying the project's current state, technologies used, and any remaining work needed.
++
++Task: Create complete backend/API code for: Build a complete full-stack real-time collaborative code editor application with the following features:
++
++1. Frontend (React + TypeScript):
++   - Monaco editor integration
++   - Real-time cursor positions of other users
++   - Live character-by-character updates
++   - User presence indicators (who's online)
++   - File explorer sidebar
++   - Syntax highlighting for multiple languages
++   - Dark/light theme toggle
++
++2. Backend (Node.js + Express):
++   - WebSocket server for real-time communication
++   - Operational Transform algorithm for conflict resolution
++   - REST API for file operations
++   - Session management
++   - Rate limiting per user
++
++3. Database (PostgreSQL):
++   - Store documents with version history
++   - User accounts and permissions
++   - Active sessions tracking
++   - Optimized for real-time queries
++
++4. Infrastructure:
++   - Redis for pub/sub and caching
++   - Docker compose for local development
++   - Environment-based configuration
++
++5. Testing:
++   - Unit tests for OT algorithm
++   - Integration tests for WebSocket events
++   - E2E tests for collaborative editing
++
++6. Security:
++   - JWT authentication
++   - Per-document permissions
++   - Rate limiting on edits
++   - XSS prevention
++
++Make it production-ready with proper error handling, logging, and monitoring hooks.. Use the language/framework specified in the request (e.g., TypeScript/Node.js, Python/FastAPI, etc.). Create working, runnable backend code with proper file structure.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-17 21:55:56.056095
++You are a aider_backend agent specializing in: backend, api, database, authentication.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++You have been given read-only access to key project files. 
++Please examine the codebase structure, understand the architecture, and provide a comprehensive analysis.
++Focus on identifying the project's current state, technologies used, and any remaining work needed.
++
++Task: Create complete backend/API code for: Build a complete full-stack real-time collaborative code editor application with the following features:
++
++1. Frontend (React + TypeScript):
++   - Monaco editor integration
++   - Real-time cursor positions of other users
++   - Live character-by-character updates
++   - User presence indicators (who's online)
++   - File explorer sidebar
++   - Syntax highlighting for multiple languages
++   - Dark/light theme toggle
++
++2. Backend (Node.js + Express):
++   - WebSocket server for real-time communication
++   - Operational Transform algorithm for conflict resolution
++   - REST API for file operations
++   - Session management
++   - Rate limiting per user
++
++3. Database (PostgreSQL):
++   - Store documents with version history
++   - User accounts and permissions
++   - Active sessions tracking
++   - Optimized for real-time queries
++
++4. Infrastructure:
++   - Redis for pub/sub and caching
++   - Docker compose for local development
++   - Environment-based configuration
++
++5. Testing:
++   - Unit tests for OT algorithm
++   - Integration tests for WebSocket events
++   - E2E tests for collaborative editing
++
++6. Security:
++   - JWT authentication
++   - Per-document permissions
++   - Rate limiting on edits
++   - XSS prevention
++
++Make it production-ready with proper error handling, logging, and monitoring hooks.. Use the language/framework specified in the request (e.g., TypeScript/Node.js, Python/FastAPI, etc.). Create working, runnable backend code with proper file structure.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-17 21:55:56.477842
++You are a aider_frontend agent specializing in: frontend, ui, components, styling.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++You have been given read-only access to key project files. 
++Please examine the codebase structure, understand the architecture, and provide a comprehensive analysis.
++Focus on identifying the project's current state, technologies used, and any remaining work needed.
++
++Task: Create complete frontend/UI code for: Build a complete full-stack real-time collaborative code editor application with the following features:
++
++1. Frontend (React + TypeScript):
++   - Monaco editor integration
++   - Real-time cursor positions of other users
++   - Live character-by-character updates
++   - User presence indicators (who's online)
++   - File explorer sidebar
++   - Syntax highlighting for multiple languages
++   - Dark/light theme toggle
++
++2. Backend (Node.js + Express):
++   - WebSocket server for real-time communication
++   - Operational Transform algorithm for conflict resolution
++   - REST API for file operations
++   - Session management
++   - Rate limiting per user
++
++3. Database (PostgreSQL):
++   - Store documents with version history
++   - User accounts and permissions
++   - Active sessions tracking
++   - Optimized for real-time queries
++
++4. Infrastructure:
++   - Redis for pub/sub and caching
++   - Docker compose for local development
++   - Environment-based configuration
++
++5. Testing:
++   - Unit tests for OT algorithm
++   - Integration tests for WebSocket events
++   - E2E tests for collaborative editing
++
++6. Security:
++   - JWT authentication
++   - Per-document permissions
++   - Rate limiting on edits
++   - XSS prevention
++
++Make it production-ready with proper error handling, logging, and monitoring hooks.. Write actual React components, pages, styling, and API integration code. Create working, runnable frontend code with proper component structure.
++
++Context: Focus on frontend development including:
++- UI/UX design and implementation
++- Component architecture and reusability  
++- Modern frontend frameworks (React, Vue, Angular)
++- CSS/styling and responsive design
++- Frontend build tools and optimization
++- Accessibility and performance
++
++Prioritize working with these file patterns:
++- *.js, *.jsx, *.ts, *.tsx, *.vue, *.svelte
++- *.css, *.scss, *.less, *.styled.*
++- **/components/**, **/pages/**, **/views/**
++- package.json, webpack.config.js, vite.config.*
+
+# 2025-06-17 21:55:56.478544
++You are a aider_frontend agent specializing in: frontend, ui, components, styling.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++You have been given read-only access to key project files. 
++Please examine the codebase structure, understand the architecture, and provide a comprehensive analysis.
++Focus on identifying the project's current state, technologies used, and any remaining work needed.
++
++Task: Create complete frontend/UI code for: Build a complete full-stack real-time collaborative code editor application with the following features:
++
++1. Frontend (React + TypeScript):
++   - Monaco editor integration
++   - Real-time cursor positions of other users
++   - Live character-by-character updates
++   - User presence indicators (who's online)
++   - File explorer sidebar
++   - Syntax highlighting for multiple languages
++   - Dark/light theme toggle
++
++2. Backend (Node.js + Express):
++   - WebSocket server for real-time communication
++   - Operational Transform algorithm for conflict resolution
++   - REST API for file operations
++   - Session management
++   - Rate limiting per user
++
++3. Database (PostgreSQL):
++   - Store documents with version history
++   - User accounts and permissions
++   - Active sessions tracking
++   - Optimized for real-time queries
++
++4. Infrastructure:
++   - Redis for pub/sub and caching
++   - Docker compose for local development
++   - Environment-based configuration
++
++5. Testing:
++   - Unit tests for OT algorithm
++   - Integration tests for WebSocket events
++   - E2E tests for collaborative editing
++
++6. Security:
++   - JWT authentication
++   - Per-document permissions
++   - Rate limiting on edits
++   - XSS prevention
++
++Make it production-ready with proper error handling, logging, and monitoring hooks.. Write actual React components, pages, styling, and API integration code. Create working, runnable frontend code with proper component structure.
++
++Context: Focus on frontend development including:
++- UI/UX design and implementation
++- Component architecture and reusability  
++- Modern frontend frameworks (React, Vue, Angular)
++- CSS/styling and responsive design
++- Frontend build tools and optimization
++- Accessibility and performance
++
++Prioritize working with these file patterns:
++- *.js, *.jsx, *.ts, *.tsx, *.vue, *.svelte
++- *.css, *.scss, *.less, *.styled.*
++- **/components/**, **/pages/**, **/views/**
++- package.json, webpack.config.js, vite.config.*
+
+# 2025-06-17 21:55:57.018277
++You are a aider_backend agent specializing in: devops, deployment, infrastructure.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++You have been given read-only access to key project files. 
++Please examine the codebase structure, understand the architecture, and provide a comprehensive analysis.
++Focus on identifying the project's current state, technologies used, and any remaining work needed.
++
++Task: Create deployment configuration for: Build a complete full-stack real-time collaborative code editor application with the following features:
++
++1. Frontend (React + TypeScript):
++   - Monaco editor integration
++   - Real-time cursor positions of other users
++   - Live character-by-character updates
++   - User presence indicators (who's online)
++   - File explorer sidebar
++   - Syntax highlighting for multiple languages
++   - Dark/light theme toggle
++
++2. Backend (Node.js + Express):
++   - WebSocket server for real-time communication
++   - Operational Transform algorithm for conflict resolution
++   - REST API for file operations
++   - Session management
++   - Rate limiting per user
++
++3. Database (PostgreSQL):
++   - Store documents with version history
++   - User accounts and permissions
++   - Active sessions tracking
++   - Optimized for real-time queries
++
++4. Infrastructure:
++   - Redis for pub/sub and caching
++   - Docker compose for local development
++   - Environment-based configuration
++
++5. Testing:
++   - Unit tests for OT algorithm
++   - Integration tests for WebSocket events
++   - E2E tests for collaborative editing
++
++6. Security:
++   - JWT authentication
++   - Per-document permissions
++   - Rate limiting on edits
++   - XSS prevention
++
++Make it production-ready with proper error handling, logging, and monitoring hooks.. Set up Docker, CI/CD, and production deployment scripts.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-17 21:55:57.018784
++You are a aider_backend agent specializing in: devops, deployment, infrastructure.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++You have been given read-only access to key project files. 
++Please examine the codebase structure, understand the architecture, and provide a comprehensive analysis.
++Focus on identifying the project's current state, technologies used, and any remaining work needed.
++
++Task: Create deployment configuration for: Build a complete full-stack real-time collaborative code editor application with the following features:
++
++1. Frontend (React + TypeScript):
++   - Monaco editor integration
++   - Real-time cursor positions of other users
++   - Live character-by-character updates
++   - User presence indicators (who's online)
++   - File explorer sidebar
++   - Syntax highlighting for multiple languages
++   - Dark/light theme toggle
++
++2. Backend (Node.js + Express):
++   - WebSocket server for real-time communication
++   - Operational Transform algorithm for conflict resolution
++   - REST API for file operations
++   - Session management
++   - Rate limiting per user
++
++3. Database (PostgreSQL):
++   - Store documents with version history
++   - User accounts and permissions
++   - Active sessions tracking
++   - Optimized for real-time queries
++
++4. Infrastructure:
++   - Redis for pub/sub and caching
++   - Docker compose for local development
++   - Environment-based configuration
++
++5. Testing:
++   - Unit tests for OT algorithm
++   - Integration tests for WebSocket events
++   - E2E tests for collaborative editing
++
++6. Security:
++   - JWT authentication
++   - Per-document permissions
++   - Rate limiting on edits
++   - XSS prevention
++
++Make it production-ready with proper error handling, logging, and monitoring hooks.. Set up Docker, CI/CD, and production deployment scripts.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-17 22:00:47.823971
++You are a aider_backend agent specializing in: backend, api, database, authentication.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete backend/API code for: Create a simple Python Flask REST API with the following:
++    1. A backend API with user endpoints (GET /users, POST /users)
++    2. Basic tests for the API endpoints
++    3. A README.md file with setup instructions
++    . Use the language/framework specified in the request (e.g., TypeScript/Node.js, Python/FastAPI, etc.). Create working, runnable backend code with proper file structure.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-17 22:00:47.824152
++You are a aider_backend agent specializing in: backend, api, database, authentication.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete backend/API code for: Create a simple Python Flask REST API with the following:
++    1. A backend API with user endpoints (GET /users, POST /users)
++    2. Basic tests for the API endpoints
++    3. A README.md file with setup instructions
++    . Use the language/framework specified in the request (e.g., TypeScript/Node.js, Python/FastAPI, etc.). Create working, runnable backend code with proper file structure.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-17 22:00:48.232047
++You are a aider_testing agent specializing in: testing, qa, automation.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create comprehensive tests for: Create a simple Python Flask REST API with the following:
++    1. A backend API with user endpoints (GET /users, POST /users)
++    2. Basic tests for the API endpoints
++    3. A README.md file with setup instructions
++    . Implement unit tests, integration tests, and end-to-end testing. Test all components and their interactions.
++
++Context: Focus on testing and quality assurance including:
++- Unit testing and test-driven development
++- Integration and end-to-end testing
++- Test automation and CI/CD
++- Code coverage and quality metrics
++- Performance and load testing
++- Bug reproduction and regression testing
++
++Prioritize working with these file patterns:
++- test_*.py, *_test.py, *.test.js, *.spec.*
++- **/tests/**, **/test/**, **/__tests__/**
++- pytest.ini, jest.config.*, karma.conf.*
++- Coverage configuration and test utilities
+
+# 2025-06-17 22:00:48.232468
++You are a aider_testing agent specializing in: testing, qa, automation.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create comprehensive tests for: Create a simple Python Flask REST API with the following:
++    1. A backend API with user endpoints (GET /users, POST /users)
++    2. Basic tests for the API endpoints
++    3. A README.md file with setup instructions
++    . Implement unit tests, integration tests, and end-to-end testing. Test all components and their interactions.
++
++Context: Focus on testing and quality assurance including:
++- Unit testing and test-driven development
++- Integration and end-to-end testing
++- Test automation and CI/CD
++- Code coverage and quality metrics
++- Performance and load testing
++- Bug reproduction and regression testing
++
++Prioritize working with these file patterns:
++- test_*.py, *_test.py, *.test.js, *.spec.*
++- **/tests/**, **/test/**, **/__tests__/**
++- pytest.ini, jest.config.*, karma.conf.*
++- Coverage configuration and test utilities
+
+# 2025-06-17 22:09:01.994785
++You are a aider_testing agent specializing in: testing.
++
++
++Task: Create a simple Python script that:
++    1. Defines a function to calculate fibonacci numbers
++    2. Includes a test for the function
++    
++
++Context: Focus on testing and quality assurance including:
++- Unit testing and test-driven development
++- Integration and end-to-end testing
++- Test automation and CI/CD
++- Code coverage and quality metrics
++- Performance and load testing
++- Bug reproduction and regression testing
++
++Prioritize working with these file patterns:
++- test_*.py, *_test.py, *.test.js, *.spec.*
++- **/tests/**, **/test/**, **/__tests__/**
++- pytest.ini, jest.config.*, karma.conf.*
++- Coverage configuration and test utilities
+
+# 2025-06-17 22:09:01.994914
++You are a aider_testing agent specializing in: testing.
++
++
++Task: Create a simple Python script that:
++    1. Defines a function to calculate fibonacci numbers
++    2. Includes a test for the function
++    
++
++Context: Focus on testing and quality assurance including:
++- Unit testing and test-driven development
++- Integration and end-to-end testing
++- Test automation and CI/CD
++- Code coverage and quality metrics
++- Performance and load testing
++- Bug reproduction and regression testing
++
++Prioritize working with these file patterns:
++- test_*.py, *_test.py, *.test.js, *.spec.*
++- **/tests/**, **/test/**, **/__tests__/**
++- pytest.ini, jest.config.*, karma.conf.*
++- Coverage configuration and test utilities
+
+# 2025-06-17 22:09:15.475885
++You are a aider_testing agent specializing in: testing.
++
++
++Task: Create a simple Python script that:
++    1. Defines a function to calculate fibonacci numbers
++    2. Includes a test for the function
++    
++
++Context: Focus on testing and quality assurance including:
++- Unit testing and test-driven development
++- Integration and end-to-end testing
++- Test automation and CI/CD
++- Code coverage and quality metrics
++- Performance and load testing
++- Bug reproduction and regression testing
++
++Prioritize working with these file patterns:
++- test_*.py, *_test.py, *.test.js, *.spec.*
++- **/tests/**, **/test/**, **/__tests__/**
++- pytest.ini, jest.config.*, karma.conf.*
++- Coverage configuration and test utilities
+
+# 2025-06-17 22:09:15.476235
++You are a aider_testing agent specializing in: testing.
++
++
++Task: Create a simple Python script that:
++    1. Defines a function to calculate fibonacci numbers
++    2. Includes a test for the function
++    
++
++Context: Focus on testing and quality assurance including:
++- Unit testing and test-driven development
++- Integration and end-to-end testing
++- Test automation and CI/CD
++- Code coverage and quality metrics
++- Performance and load testing
++- Bug reproduction and regression testing
++
++Prioritize working with these file patterns:
++- test_*.py, *_test.py, *.test.js, *.spec.*
++- **/tests/**, **/test/**, **/__tests__/**
++- pytest.ini, jest.config.*, karma.conf.*
++- Coverage configuration and test utilities
+
+# 2025-06-17 22:10:42.398087
++You are a aider_frontend agent specializing in: frontend, ui, components, styling.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete frontend/UI code for: Build a Python web application with:
++    1. A Flask backend with REST API endpoints
++    2. Frontend HTML/CSS/JS files
++    3. Tests for the API
++    . Write actual React components, pages, styling, and API integration code. Create working, runnable frontend code with proper component structure.
++
++Context: Focus on frontend development including:
++- UI/UX design and implementation
++- Component architecture and reusability  
++- Modern frontend frameworks (React, Vue, Angular)
++- CSS/styling and responsive design
++- Frontend build tools and optimization
++- Accessibility and performance
++
++Prioritize working with these file patterns:
++- *.js, *.jsx, *.ts, *.tsx, *.vue, *.svelte
++- *.css, *.scss, *.less, *.styled.*
++- **/components/**, **/pages/**, **/views/**
++- package.json, webpack.config.js, vite.config.*
+
+# 2025-06-17 22:10:42.398195
++You are a aider_frontend agent specializing in: frontend, ui, components, styling.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete frontend/UI code for: Build a Python web application with:
++    1. A Flask backend with REST API endpoints
++    2. Frontend HTML/CSS/JS files
++    3. Tests for the API
++    . Write actual React components, pages, styling, and API integration code. Create working, runnable frontend code with proper component structure.
++
++Context: Focus on frontend development including:
++- UI/UX design and implementation
++- Component architecture and reusability  
++- Modern frontend frameworks (React, Vue, Angular)
++- CSS/styling and responsive design
++- Frontend build tools and optimization
++- Accessibility and performance
++
++Prioritize working with these file patterns:
++- *.js, *.jsx, *.ts, *.tsx, *.vue, *.svelte
++- *.css, *.scss, *.less, *.styled.*
++- **/components/**, **/pages/**, **/views/**
++- package.json, webpack.config.js, vite.config.*
+
+# 2025-06-17 22:10:42.797800
++You are a aider_testing agent specializing in: testing, qa, automation.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create comprehensive tests for: Build a Python web application with:
++    1. A Flask backend with REST API endpoints
++    2. Frontend HTML/CSS/JS files
++    3. Tests for the API
++    . Implement unit tests, integration tests, and end-to-end testing. Test all components and their interactions.
++
++Context: Focus on testing and quality assurance including:
++- Unit testing and test-driven development
++- Integration and end-to-end testing
++- Test automation and CI/CD
++- Code coverage and quality metrics
++- Performance and load testing
++- Bug reproduction and regression testing
++
++Prioritize working with these file patterns:
++- test_*.py, *_test.py, *.test.js, *.spec.*
++- **/tests/**, **/test/**, **/__tests__/**
++- pytest.ini, jest.config.*, karma.conf.*
++- Coverage configuration and test utilities
+
+# 2025-06-17 22:10:42.798180
++You are a aider_testing agent specializing in: testing, qa, automation.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create comprehensive tests for: Build a Python web application with:
++    1. A Flask backend with REST API endpoints
++    2. Frontend HTML/CSS/JS files
++    3. Tests for the API
++    . Implement unit tests, integration tests, and end-to-end testing. Test all components and their interactions.
++
++Context: Focus on testing and quality assurance including:
++- Unit testing and test-driven development
++- Integration and end-to-end testing
++- Test automation and CI/CD
++- Code coverage and quality metrics
++- Performance and load testing
++- Bug reproduction and regression testing
++
++Prioritize working with these file patterns:
++- test_*.py, *_test.py, *.test.js, *.spec.*
++- **/tests/**, **/test/**, **/__tests__/**
++- pytest.ini, jest.config.*, karma.conf.*
++- Coverage configuration and test utilities
+
+# 2025-06-17 22:10:43.196240
++You are a aider_backend agent specializing in: backend, api, database, authentication.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete backend/API code for: Build a Python web application with:
++    1. A Flask backend with REST API endpoints
++    2. Frontend HTML/CSS/JS files
++    3. Tests for the API
++    . Use the language/framework specified in the request (e.g., TypeScript/Node.js, Python/FastAPI, etc.). Create working, runnable backend code with proper file structure.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-17 22:10:43.196826
++You are a aider_backend agent specializing in: backend, api, database, authentication.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete backend/API code for: Build a Python web application with:
++    1. A Flask backend with REST API endpoints
++    2. Frontend HTML/CSS/JS files
++    3. Tests for the API
++    . Use the language/framework specified in the request (e.g., TypeScript/Node.js, Python/FastAPI, etc.). Create working, runnable backend code with proper file structure.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 12:34:48.278532
++You are a aider_backend agent specializing in: backend, api, database, architecture.
++
++
++Task: hello world
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 12:34:48.278833
++You are a aider_backend agent specializing in: backend, api, database, architecture.
++
++
++Task: hello world
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 12:35:06.461581
++You are a aider_backend agent specializing in: backend, api, database, authentication.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete backend/API code for: build me a simple todo app with React frontend and Node.js backend. Work within the backend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the backend, install dependencies, and implement all backend services, APIs, and database logic. Ensure the backend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 12:35:06.462397
++You are a aider_backend agent specializing in: backend, api, database, authentication.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete backend/API code for: build me a simple todo app with React frontend and Node.js backend. Work within the backend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the backend, install dependencies, and implement all backend services, APIs, and database logic. Ensure the backend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 12:35:06.888233
++You are a aider_backend agent specializing in: setup, configuration, finalization.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Finalize the project setup. Run necessary installation commands (npm install in appropriate directories), verify all configurations are correct, ensure all services can start properly, and create a quick start guide in the README. Make sure the entire system is ready to run.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 12:35:06.888317
++You are a aider_backend agent specializing in: setup, configuration, finalization.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Finalize the project setup. Run necessary installation commands (npm install in appropriate directories), verify all configurations are correct, ensure all services can start properly, and create a quick start guide in the README. Make sure the entire system is ready to run.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 12:35:07.298074
++You are a aider_frontend agent specializing in: frontend, ui, components, styling.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete frontend/UI code for: build me a simple todo app with React frontend and Node.js backend. Work within the frontend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the frontend, set up the build system (Vite/Webpack), install dependencies, and implement all UI components, pages, styling, and API integration. Ensure the frontend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on frontend development including:
++- UI/UX design and implementation
++- Component architecture and reusability  
++- Modern frontend frameworks (React, Vue, Angular)
++- CSS/styling and responsive design
++- Frontend build tools and optimization
++- Accessibility and performance
++
++Prioritize working with these file patterns:
++- *.js, *.jsx, *.ts, *.tsx, *.vue, *.svelte
++- *.css, *.scss, *.less, *.styled.*
++- **/components/**, **/pages/**, **/views/**
++- package.json, webpack.config.js, vite.config.*
+
+# 2025-06-21 12:35:07.298152
++You are a aider_frontend agent specializing in: frontend, ui, components, styling.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete frontend/UI code for: build me a simple todo app with React frontend and Node.js backend. Work within the frontend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the frontend, set up the build system (Vite/Webpack), install dependencies, and implement all UI components, pages, styling, and API integration. Ensure the frontend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on frontend development including:
++- UI/UX design and implementation
++- Component architecture and reusability  
++- Modern frontend frameworks (React, Vue, Angular)
++- CSS/styling and responsive design
++- Frontend build tools and optimization
++- Accessibility and performance
++
++Prioritize working with these file patterns:
++- *.js, *.jsx, *.ts, *.tsx, *.vue, *.svelte
++- *.css, *.scss, *.less, *.styled.*
++- **/components/**, **/pages/**, **/views/**
++- package.json, webpack.config.js, vite.config.*
+
+# 2025-06-21 12:38:43.569022
++You are a aider_backend agent specializing in: devops.
++
++
++Task: build a simple hello world app
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 12:38:43.570150
++You are a aider_backend agent specializing in: devops.
++
++
++Task: build a simple hello world app
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:01:44.506915
++You are a aider_backend agent specializing in: setup, configuration, finalization.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Finalize the project setup. Run necessary installation commands (npm install in appropriate directories), verify all configurations are correct, ensure all services can start properly, and create a quick start guide in the README. Make sure the entire system is ready to run.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:01:44.507111
++You are a aider_backend agent specializing in: setup, configuration, finalization.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Finalize the project setup. Run necessary installation commands (npm install in appropriate directories), verify all configurations are correct, ensure all services can start properly, and create a quick start guide in the README. Make sure the entire system is ready to run.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:01:44.924409
++You are a aider_frontend agent specializing in: frontend, ui, components, styling.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete frontend/UI code for: build me a simple todo app with React frontend and Node.js backend. Work within the frontend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the frontend, set up the build system (Vite/Webpack), install dependencies, and implement all UI components, pages, styling, and API integration. Ensure the frontend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on frontend development including:
++- UI/UX design and implementation
++- Component architecture and reusability  
++- Modern frontend frameworks (React, Vue, Angular)
++- CSS/styling and responsive design
++- Frontend build tools and optimization
++- Accessibility and performance
++
++Prioritize working with these file patterns:
++- *.js, *.jsx, *.ts, *.tsx, *.vue, *.svelte
++- *.css, *.scss, *.less, *.styled.*
++- **/components/**, **/pages/**, **/views/**
++- package.json, webpack.config.js, vite.config.*
+
+# 2025-06-21 16:01:44.942811
++You are a aider_frontend agent specializing in: frontend, ui, components, styling.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete frontend/UI code for: build me a simple todo app with React frontend and Node.js backend. Work within the frontend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the frontend, set up the build system (Vite/Webpack), install dependencies, and implement all UI components, pages, styling, and API integration. Ensure the frontend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on frontend development including:
++- UI/UX design and implementation
++- Component architecture and reusability  
++- Modern frontend frameworks (React, Vue, Angular)
++- CSS/styling and responsive design
++- Frontend build tools and optimization
++- Accessibility and performance
++
++Prioritize working with these file patterns:
++- *.js, *.jsx, *.ts, *.tsx, *.vue, *.svelte
++- *.css, *.scss, *.less, *.styled.*
++- **/components/**, **/pages/**, **/views/**
++- package.json, webpack.config.js, vite.config.*
+
+# 2025-06-21 16:01:45.345003
++You are a aider_backend agent specializing in: backend, api, database, authentication.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete backend/API code for: build me a simple todo app with React frontend and Node.js backend. Work within the backend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the backend, install dependencies, and implement all backend services, APIs, and database logic. Ensure the backend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:01:45.345113
++You are a aider_backend agent specializing in: backend, api, database, authentication.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete backend/API code for: build me a simple todo app with React frontend and Node.js backend. Work within the backend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the backend, install dependencies, and implement all backend services, APIs, and database logic. Ensure the backend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:03:35.409552
++You are a aider_backend agent specializing in: devops.
++
++
++Task: build hello world
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:03:35.409824
++You are a aider_backend agent specializing in: devops.
++
++
++Task: build hello world
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:05:22.276768
++You are a aider_backend agent specializing in: devops.
++
++
++Task: build me a simple hello world app
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:05:22.278356
++You are a aider_backend agent specializing in: devops.
++
++
++Task: build me a simple hello world app
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:06:22.555234
++You are a aider_frontend agent specializing in: frontend, ui, components, styling.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete frontend/UI code for: build me a simple todo app with React frontend and Node.js backend. Work within the frontend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the frontend, set up the build system (Vite/Webpack), install dependencies, and implement all UI components, pages, styling, and API integration. Ensure the frontend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on frontend development including:
++- UI/UX design and implementation
++- Component architecture and reusability  
++- Modern frontend frameworks (React, Vue, Angular)
++- CSS/styling and responsive design
++- Frontend build tools and optimization
++- Accessibility and performance
++
++Prioritize working with these file patterns:
++- *.js, *.jsx, *.ts, *.tsx, *.vue, *.svelte
++- *.css, *.scss, *.less, *.styled.*
++- **/components/**, **/pages/**, **/views/**
++- package.json, webpack.config.js, vite.config.*
+
+# 2025-06-21 16:06:22.555637
++You are a aider_frontend agent specializing in: frontend, ui, components, styling.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete frontend/UI code for: build me a simple todo app with React frontend and Node.js backend. Work within the frontend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the frontend, set up the build system (Vite/Webpack), install dependencies, and implement all UI components, pages, styling, and API integration. Ensure the frontend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on frontend development including:
++- UI/UX design and implementation
++- Component architecture and reusability  
++- Modern frontend frameworks (React, Vue, Angular)
++- CSS/styling and responsive design
++- Frontend build tools and optimization
++- Accessibility and performance
++
++Prioritize working with these file patterns:
++- *.js, *.jsx, *.ts, *.tsx, *.vue, *.svelte
++- *.css, *.scss, *.less, *.styled.*
++- **/components/**, **/pages/**, **/views/**
++- package.json, webpack.config.js, vite.config.*
+
+# 2025-06-21 16:06:22.983438
++You are a aider_backend agent specializing in: backend, api, database, authentication.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete backend/API code for: build me a simple todo app with React frontend and Node.js backend. Work within the backend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the backend, install dependencies, and implement all backend services, APIs, and database logic. Ensure the backend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:06:22.983924
++You are a aider_backend agent specializing in: backend, api, database, authentication.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete backend/API code for: build me a simple todo app with React frontend and Node.js backend. Work within the backend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the backend, install dependencies, and implement all backend services, APIs, and database logic. Ensure the backend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:06:23.402180
++You are a aider_backend agent specializing in: setup, configuration, finalization.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Finalize the project setup. Run necessary installation commands (npm install in appropriate directories), verify all configurations are correct, ensure all services can start properly, and create a quick start guide in the README. Make sure the entire system is ready to run.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:06:23.402750
++You are a aider_backend agent specializing in: setup, configuration, finalization.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Finalize the project setup. Run necessary installation commands (npm install in appropriate directories), verify all configurations are correct, ensure all services can start properly, and create a quick start guide in the README. Make sure the entire system is ready to run.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:08:07.628128
++You are a aider_backend agent specializing in: backend, api, database, authentication.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete backend/API code for: build a simple todo app with React frontend and Node.js backend. Work within the backend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the backend, install dependencies, and implement all backend services, APIs, and database logic. Ensure the backend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:08:07.628525
++You are a aider_backend agent specializing in: backend, api, database, authentication.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete backend/API code for: build a simple todo app with React frontend and Node.js backend. Work within the backend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the backend, install dependencies, and implement all backend services, APIs, and database logic. Ensure the backend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:08:08.031220
++You are a aider_frontend agent specializing in: frontend, ui, components, styling.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete frontend/UI code for: build a simple todo app with React frontend and Node.js backend. Work within the frontend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the frontend, set up the build system (Vite/Webpack), install dependencies, and implement all UI components, pages, styling, and API integration. Ensure the frontend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on frontend development including:
++- UI/UX design and implementation
++- Component architecture and reusability  
++- Modern frontend frameworks (React, Vue, Angular)
++- CSS/styling and responsive design
++- Frontend build tools and optimization
++- Accessibility and performance
++
++Prioritize working with these file patterns:
++- *.js, *.jsx, *.ts, *.tsx, *.vue, *.svelte
++- *.css, *.scss, *.less, *.styled.*
++- **/components/**, **/pages/**, **/views/**
++- package.json, webpack.config.js, vite.config.*
+
+# 2025-06-21 16:08:08.031331
++You are a aider_frontend agent specializing in: frontend, ui, components, styling.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete frontend/UI code for: build a simple todo app with React frontend and Node.js backend. Work within the frontend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the frontend, set up the build system (Vite/Webpack), install dependencies, and implement all UI components, pages, styling, and API integration. Ensure the frontend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on frontend development including:
++- UI/UX design and implementation
++- Component architecture and reusability  
++- Modern frontend frameworks (React, Vue, Angular)
++- CSS/styling and responsive design
++- Frontend build tools and optimization
++- Accessibility and performance
++
++Prioritize working with these file patterns:
++- *.js, *.jsx, *.ts, *.tsx, *.vue, *.svelte
++- *.css, *.scss, *.less, *.styled.*
++- **/components/**, **/pages/**, **/views/**
++- package.json, webpack.config.js, vite.config.*
+
+# 2025-06-21 16:08:08.453384
++You are a aider_backend agent specializing in: setup, configuration, finalization.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Finalize the project setup. Run necessary installation commands (npm install in appropriate directories), verify all configurations are correct, ensure all services can start properly, and create a quick start guide in the README. Make sure the entire system is ready to run.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:08:08.453676
++You are a aider_backend agent specializing in: setup, configuration, finalization.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Finalize the project setup. Run necessary installation commands (npm install in appropriate directories), verify all configurations are correct, ensure all services can start properly, and create a quick start guide in the README. Make sure the entire system is ready to run.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:09:21.869581
++You are a aider_frontend agent specializing in: frontend, ui, components, styling.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete frontend/UI code for: build me a simple todo app with React frontend and Node.js backend. Work within the frontend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the frontend, set up the build system (Vite/Webpack), install dependencies, and implement all UI components, pages, styling, and API integration. Ensure the frontend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on frontend development including:
++- UI/UX design and implementation
++- Component architecture and reusability  
++- Modern frontend frameworks (React, Vue, Angular)
++- CSS/styling and responsive design
++- Frontend build tools and optimization
++- Accessibility and performance
++
++Prioritize working with these file patterns:
++- *.js, *.jsx, *.ts, *.tsx, *.vue, *.svelte
++- *.css, *.scss, *.less, *.styled.*
++- **/components/**, **/pages/**, **/views/**
++- package.json, webpack.config.js, vite.config.*
+
+# 2025-06-21 16:09:21.869853
++You are a aider_frontend agent specializing in: frontend, ui, components, styling.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete frontend/UI code for: build me a simple todo app with React frontend and Node.js backend. Work within the frontend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the frontend, set up the build system (Vite/Webpack), install dependencies, and implement all UI components, pages, styling, and API integration. Ensure the frontend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on frontend development including:
++- UI/UX design and implementation
++- Component architecture and reusability  
++- Modern frontend frameworks (React, Vue, Angular)
++- CSS/styling and responsive design
++- Frontend build tools and optimization
++- Accessibility and performance
++
++Prioritize working with these file patterns:
++- *.js, *.jsx, *.ts, *.tsx, *.vue, *.svelte
++- *.css, *.scss, *.less, *.styled.*
++- **/components/**, **/pages/**, **/views/**
++- package.json, webpack.config.js, vite.config.*
+
+# 2025-06-21 16:09:22.284153
++You are a aider_backend agent specializing in: setup, configuration, finalization.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Finalize the project setup. Run necessary installation commands (npm install in appropriate directories), verify all configurations are correct, ensure all services can start properly, and create a quick start guide in the README. Make sure the entire system is ready to run.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:09:22.284422
++You are a aider_backend agent specializing in: setup, configuration, finalization.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Finalize the project setup. Run necessary installation commands (npm install in appropriate directories), verify all configurations are correct, ensure all services can start properly, and create a quick start guide in the README. Make sure the entire system is ready to run.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:09:22.699403
++You are a aider_backend agent specializing in: backend, api, database, authentication.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete backend/API code for: build me a simple todo app with React frontend and Node.js backend. Work within the backend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the backend, install dependencies, and implement all backend services, APIs, and database logic. Ensure the backend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:09:22.699890
++You are a aider_backend agent specializing in: backend, api, database, authentication.
++
++Target Language: python
++Framework: react
++Project Type: web
++
++Task: Create complete backend/API code for: build me a simple todo app with React frontend and Node.js backend. Work within the backend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the backend, install dependencies, and implement all backend services, APIs, and database logic. Ensure the backend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:10:25.478030
++You are a aider_backend agent specializing in: backend, api, database, authentication.
++
++Project Type: unknown
++
++Task: Create complete backend/API code for: build me a simple todo app with React frontend and Node.js backend. Work within the backend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the backend, install dependencies, and implement all backend services, APIs, and database logic. Ensure the backend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:10:25.478487
++You are a aider_backend agent specializing in: backend, api, database, authentication.
++
++Project Type: unknown
++
++Task: Create complete backend/API code for: build me a simple todo app with React frontend and Node.js backend. Work within the backend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the backend, install dependencies, and implement all backend services, APIs, and database logic. Ensure the backend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:10:55.209392
++You are a aider_backend agent specializing in: setup, configuration, finalization.
++
++Project Type: unknown
++
++Task: Finalize the project setup. Run necessary installation commands (npm install in appropriate directories), verify all configurations are correct, ensure all services can start properly, and create a quick start guide in the README. Make sure the entire system is ready to run.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:10:55.209490
++You are a aider_backend agent specializing in: setup, configuration, finalization.
++
++Project Type: unknown
++
++Task: Finalize the project setup. Run necessary installation commands (npm install in appropriate directories), verify all configurations are correct, ensure all services can start properly, and create a quick start guide in the README. Make sure the entire system is ready to run.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on backend development including:
++- API design and implementation (REST, GraphQL)
++- Database design, queries, and migrations
++- Authentication and authorization
++- Server configuration and middleware
++- Performance optimization and caching
++- Error handling and logging
++
++Prioritize working with these file patterns:
++- *.py, *.js, *.ts, *.go, *.rs, *.java
++- **/models/**, **/api/**, **/services/**
++- requirements.txt, go.mod, Cargo.toml, pom.xml
++- Database migration files and SQL scripts
+
+# 2025-06-21 16:10:55.600255
++You are a aider_frontend agent specializing in: frontend, ui, components, styling.
++
++Project Type: unknown
++
++Task: Create complete frontend/UI code for: build me a simple todo app with React frontend and Node.js backend. Work within the frontend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the frontend, set up the build system (Vite/Webpack), install dependencies, and implement all UI components, pages, styling, and API integration. Ensure the frontend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on frontend development including:
++- UI/UX design and implementation
++- Component architecture and reusability  
++- Modern frontend frameworks (React, Vue, Angular)
++- CSS/styling and responsive design
++- Frontend build tools and optimization
++- Accessibility and performance
++
++Prioritize working with these file patterns:
++- *.js, *.jsx, *.ts, *.tsx, *.vue, *.svelte
++- *.css, *.scss, *.less, *.styled.*
++- **/components/**, **/pages/**, **/views/**
++- package.json, webpack.config.js, vite.config.*
+
+# 2025-06-21 16:10:55.600852
++You are a aider_frontend agent specializing in: frontend, ui, components, styling.
++
++Project Type: unknown
++
++Task: Create complete frontend/UI code for: build me a simple todo app with React frontend and Node.js backend. Work within the frontend/ directory if it exists, otherwise create your own structure. Create a separate package.json for the frontend, set up the build system (Vite/Webpack), install dependencies, and implement all UI components, pages, styling, and API integration. Ensure the frontend is runnable and properly structured.
++
++IMPORTANT: Please create actual files using appropriate commands. Do not just show code examples - actually create the files on disk.
++
++Context: Focus on frontend development including:
++- UI/UX design and implementation
++- Component architecture and reusability  
++- Modern frontend frameworks (React, Vue, Angular)
++- CSS/styling and responsive design
++- Frontend build tools and optimization
++- Accessibility and performance
++
++Prioritize working with these file patterns:
++- *.js, *.jsx, *.ts, *.tsx, *.vue, *.svelte
++- *.css, *.scss, *.less, *.styled.*
++- **/components/**, **/pages/**, **/views/**
++- package.json, webpack.config.js, vite.config.*

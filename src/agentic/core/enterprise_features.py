@@ -1,16 +1,14 @@
 # Enterprise Features for Phase 5
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import json
 import logging
 import uuid
-from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Set, Union
+from typing import Dict, List, Optional, Any, Set
 from dataclasses import dataclass, field
 
 from pydantic import BaseModel, Field
@@ -874,7 +872,6 @@ class EnterpriseManager:
         """Load persisted enterprise data"""
         # In a real implementation, this would load teams, users, etc.
         # from a database or persistent storage
-        pass
     
     def create_admin_user(self, username: str, email: str, full_name: str) -> User:
         """Create initial admin user"""

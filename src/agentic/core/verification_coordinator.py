@@ -5,14 +5,12 @@ Ensures that generated code actually works by running tests and coordinating fix
 """
 
 import asyncio
-import subprocess
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Dict, Optional, Any, Tuple
-from datetime import datetime
+from typing import List, Dict, Any, Tuple
 
-from agentic.models.task import Task, TaskResult
+from agentic.models.task import Task
 from agentic.utils.logging import LoggerMixin
 
 
@@ -91,6 +89,22 @@ class VerificationCoordinator(LoggerMixin):
         test_results = {}
         failures = []
         
+        # If project type is unknown, that's a failure
+        if project_type == 'unknown':
+            failures.append({
+                'type': 'project_detection',
+                'error': 'No recognizable project structure found',
+                'output': 'Expected package.json, requirements.txt, or other project files'
+            })
+            # Return early with failure
+            return VerificationResult(
+                success=False,
+                test_results={},
+                system_health={},
+                failures=failures,
+                suggestions=['Create a proper project structure with package.json or requirements.txt']
+            )
+        
         # Run different types of tests based on project
         if project_type in ['npm', 'typescript', 'react']:
             # Check if package.json exists
@@ -103,11 +117,25 @@ class VerificationCoordinator(LoggerMixin):
                         'error': 'Failed to install npm dependencies',
                         'output': install_result[1]
                     })
+                    # Can't run tests without dependencies
+                    return VerificationResult(
+                        success=False,
+                        test_results={},
+                        system_health={},
+                        failures=failures,
+                        suggestions=['Fix package.json and ensure npm install succeeds']
+                    )
                 
                 # Run tests
                 test_results['unit_tests'] = await self._run_npm_tests()
                 test_results['lint'] = await self._run_npm_lint()
                 test_results['build'] = await self._run_npm_build()
+            else:
+                failures.append({
+                    'type': 'missing_package_json',
+                    'error': 'No package.json found for npm project',
+                    'output': 'Expected package.json in project root'
+                })
             
         elif project_type == 'python':
             # Run Python tests
@@ -117,9 +145,19 @@ class VerificationCoordinator(LoggerMixin):
         # Test system startup
         system_health = await self._check_system_health(project_type)
         
-        # Determine overall success
-        success = all(result.passed for result in test_results.values()) and \
-                 all(system_health.values())
+        # CRITICAL FIX: Require at least some tests to exist
+        if not test_results:
+            failures.append({
+                'type': 'no_tests',
+                'error': 'No tests were found or run',
+                'output': 'A production system must have tests'
+            })
+            success = False
+        else:
+            # Only consider success if we actually ran tests AND they passed
+            success = all(result.passed for result in test_results.values()) and \
+                     all(system_health.values()) and \
+                     len(test_results) > 0  # Must have at least one test
         
         # Generate suggestions for failures
         suggestions = self._generate_fix_suggestions(test_results, system_health)
@@ -199,15 +237,42 @@ class VerificationCoordinator(LoggerMixin):
         if not await self._check_npm_script('test'):
             return TestResult(
                 test_type='unit_tests',
-                passed=True,  # No tests is not a failure
-                output="No test script defined in package.json"
+                passed=False,  # No tests IS a failure for production code
+                output="No test script defined in package.json",
+                errors=["Missing test script in package.json"]
             )
         
-        success, stdout, stderr = await self._run_command('npm test -- --passWithNoTests')
+        # Also check if test files actually exist
+        test_patterns = ['**/*.test.js', '**/*.test.ts', '**/*.spec.js', '**/*.spec.ts', 
+                        'test/**/*.js', 'tests/**/*.js', '__tests__/**/*.js']
+        has_test_files = False
+        for pattern in test_patterns:
+            if list(self.workspace_path.glob(pattern)):
+                has_test_files = True
+                break
+        
+        if not has_test_files:
+            return TestResult(
+                test_type='unit_tests',
+                passed=False,
+                output="No test files found",
+                errors=["No test files (*.test.js, *.spec.js, etc.) found in project"]
+            )
+        
+        # Don't use --passWithNoTests - we want it to fail if no tests exist
+        success, stdout, stderr = await self._run_command('npm test')
         duration = asyncio.get_event_loop().time() - start_time
         
         # Parse test results from output
         test_stats = self._parse_test_output(stdout + stderr)
+        
+        # Check if no tests were found
+        if success and test_stats.get('total', 0) == 0:
+            # This means the test runner passed but found no tests
+            success = False
+            errors = ["No test files found - production code must have tests"]
+        else:
+            errors = self._extract_test_errors(stdout + stderr) if not success else []
         
         return TestResult(
             test_type='unit_tests',
@@ -215,7 +280,7 @@ class VerificationCoordinator(LoggerMixin):
             total_tests=test_stats.get('total', 0),
             passed_tests=test_stats.get('passed', 0),
             failed_tests=test_stats.get('failed', 0),
-            errors=self._extract_test_errors(stdout + stderr) if not success else [],
+            errors=errors,
             output=stdout + stderr,
             duration=duration
         )
@@ -225,8 +290,9 @@ class VerificationCoordinator(LoggerMixin):
         if not await self._check_npm_script('lint'):
             return TestResult(
                 test_type='lint',
-                passed=True,
-                output="No lint script defined"
+                passed=False,  # Production code should have linting
+                output="No lint script defined",
+                errors=["Missing lint script in package.json"]
             )
         
         success, stdout, stderr = await self._run_command('npm run lint')
@@ -241,10 +307,12 @@ class VerificationCoordinator(LoggerMixin):
     async def _run_npm_build(self) -> TestResult:
         """Run npm build"""
         if not await self._check_npm_script('build'):
+            # For TypeScript projects, build is essential
             return TestResult(
                 test_type='build',
-                passed=True,
-                output="No build script defined"
+                passed=False,
+                output="No build script defined",
+                errors=["Missing build script in package.json - required for TypeScript projects"]
             )
         
         success, stdout, stderr = await self._run_command('npm run build')

@@ -6,11 +6,11 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List
 
 from agentic.core.dependency_graph import DependencyGraphBuilder
 from agentic.core.project_analyzer import ProjectAnalyzer
-from agentic.models.project import DependencyGraph, ProjectStructure, TechStack
+from agentic.models.project import DependencyGraph, ProjectStructure
 from agentic.utils.logging import LoggerMixin
 
 

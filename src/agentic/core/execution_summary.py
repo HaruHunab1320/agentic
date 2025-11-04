@@ -6,16 +6,12 @@ instead of raw JSON dumps.
 """
 
 from dataclasses import dataclass
-from datetime import datetime
-from typing import Dict, List, Optional, Any
-import json
+from typing import Dict, List, Any
 from pathlib import Path
 
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from rich.text import Text
-from rich.markdown import Markdown
 
 from agentic.models.task import TaskResult
 from agentic.core.coordination_engine import ExecutionResult

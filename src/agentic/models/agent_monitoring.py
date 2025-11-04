@@ -3,7 +3,7 @@ Agent monitoring interface for status reporting
 """
 
 from typing import Optional, Callable
-from agentic.core.swarm_monitor import AgentStatus
+from agentic.core.swarm_monitor_unified import AgentStatus
 
 
 class MonitoringMixin:

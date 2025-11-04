@@ -1,7 +1,6 @@
 # Advanced Plugin System Architecture for Phase 5
 from __future__ import annotations
 
-import asyncio
 import importlib
 import importlib.util
 import inspect
@@ -10,11 +9,10 @@ import pkgutil
 import sys
 import uuid
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Set, Callable, Type, Union
-import traceback
+from typing import Dict, List, Optional, Any, Set, Callable, Type
 
 from pydantic import BaseModel, Field
 
@@ -134,27 +132,22 @@ class BasePlugin(ABC):
     @abstractmethod
     async def initialize(self) -> bool:
         """Initialize the plugin. Return True if successful."""
-        pass
     
     @abstractmethod
     async def activate(self) -> bool:
         """Activate the plugin. Return True if successful."""
-        pass
     
     @abstractmethod
     async def deactivate(self) -> bool:
         """Deactivate the plugin. Return True if successful."""
-        pass
     
     @abstractmethod
     async def cleanup(self) -> bool:
         """Clean up plugin resources. Return True if successful."""
-        pass
     
     @abstractmethod
     def get_metadata(self) -> PluginMetadata:
         """Get plugin metadata."""
-        pass
     
     def register_hook(self, hook_type: HookType, callback: Callable):
         """Register a hook callback"""

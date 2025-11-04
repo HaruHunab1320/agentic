@@ -73,7 +73,8 @@ class IntentClassifier:
         
         self.coordination_keywords = {
             "across", "throughout", "all", "entire", "multiple", "both",
-            "frontend and backend", "full stack", "end to end", "complete"
+            "frontend and backend", "full stack", "end to end", "complete",
+            "comprehensive", "system", "application", "platform", "solution"
         }
     
     async def analyze_intent(self, command: str) -> TaskIntent:
@@ -93,8 +94,8 @@ class IntentClassifier:
         # Check if reasoning is required
         requires_reasoning = self._requires_reasoning(task_type, complexity_score, command_words)
         
-        # Check if coordination is required
-        requires_coordination = self._requires_coordination(command_words, affected_areas)
+        # Check if coordination is required - pass the full command for phrase matching
+        requires_coordination = self._requires_coordination_v2(command_lower, command_words, affected_areas)
         
         # Estimate duration
         estimated_duration = self._estimate_duration(task_type, complexity_score, len(command_words))
@@ -209,6 +210,74 @@ class IntentClassifier:
         
         # Specific coordination keywords
         if command_words & self.coordination_keywords:
+            return True
+        
+        # Check for multi-word coordination phrases
+        command_text = ' '.join(command_words)
+        multi_word_phrases = [
+            "production ready", "production-ready", "sniper bot", "trading bot",
+            "full stack", "end to end", "with tests", "including tests",
+            "real time", "real-time", "with frontend", "with backend",
+            "complete application", "complete system", "build me a"
+        ]
+        
+        for phrase in multi_word_phrases:
+            if phrase in command_text:
+                return True
+        
+        return False
+    
+    def _requires_coordination_v2(self, command_lower: str, command_words: Set[str], affected_areas: List[str]) -> bool:
+        """Determine if task requires coordination between agents based on complexity indicators"""
+        # Multiple areas affected requires coordination
+        if len(affected_areas) > 1:
+            return True
+        
+        # Specific coordination keywords
+        if command_words & self.coordination_keywords:
+            return True
+        
+        # Check for multi-word coordination phrases that indicate complexity
+        multi_word_phrases = [
+            "full stack", "full-stack", "end to end", "end-to-end",
+            "with tests", "including tests", "and tests", "with documentation",
+            "complete application", "complete system", "entire system",
+            "production ready", "production-ready", "enterprise grade"
+        ]
+        
+        for phrase in multi_word_phrases:
+            if phrase in command_lower:
+                return True
+        
+        # Heuristic: Complex creation tasks with multiple components
+        creation_words = {"build", "create", "implement", "develop", "make", "construct"}
+        complexity_modifiers = {"complete", "full", "entire", "comprehensive", "production", "enterprise", "scalable", "distributed"}
+        scope_words = {"application", "system", "platform", "service", "solution", "project", "bot", "tool", "utility"}
+        
+        has_creation = bool(command_words & creation_words)
+        has_modifier = bool(command_words & complexity_modifiers)
+        has_scope = bool(command_words & scope_words)
+        
+        # If command has creation + modifier + scope, it likely needs multiple agents
+        if has_creation and has_modifier and has_scope:
+            return True
+        
+        # If command mentions multiple technical components
+        technical_components = 0
+        component_categories = [
+            {"api", "backend", "server", "database", "auth", "authentication"},
+            {"ui", "frontend", "interface", "dashboard", "client"},
+            {"test", "testing", "tests", "qa", "quality"},
+            {"deploy", "deployment", "docker", "kubernetes", "ci", "cd"},
+            {"docs", "documentation", "readme", "guide"}
+        ]
+        
+        for category in component_categories:
+            if command_words & category:
+                technical_components += 1
+        
+        # Multiple technical components suggest coordination needed
+        if technical_components >= 2:
             return True
         
         return False
